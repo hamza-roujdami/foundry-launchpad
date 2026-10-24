@@ -9,8 +9,8 @@ A rapid-innovation sandbox that lets AI engineers start building on Microsoft Fo
 **What you get**
 
 - **AI engineers** start on day one with one gateway URL and one identity.
-- **The platform team** stays in control: no model keys outside the hub, a limit per project, usage per project for showback, and one place to apply policy.
-- **Security** gets a defensible baseline: Entra ID authentication, managed identity to the model, private networking and Azure Policy guardrails.
+- **The platform team** stays in control: no model keys outside the hub, a limit per project, usage per project for showback, and one governed gateway for every call.
+- **Security** gets a defensible baseline: calls authenticated with Entra ID tokens, managed identity to the model, and private networking.
 
 **What this is not.** It is not a platform landing zone. It is a workload that you deploy into your own Azure environment, on top of the landing zone you already run.
 
@@ -18,193 +18,97 @@ A rapid-innovation sandbox that lets AI engineers start building on Microsoft Fo
 
 ## 2. Architecture
 
-To keep this reference simple, it uses one Azure subscription with an AI hub resource group and an AI sandbox resource group.
+To keep this reference simple, it uses one Azure subscription with three resource groups.
 
-- An **AI hub**, a resource group owned by the platform team. It holds Microsoft Foundry and one governed gateway in front of it. Nobody else holds model credentials.
-- An **AI sandbox**, a resource group where AI engineers build their apps and agents. They reach Foundry only through the hub, each project with its own identity, token limit and usage numbers.
+- A **network** resource group (`rg-network`), owned by the platform team. It holds the spoke VNet, its subnets and the private DNS zones that the other two groups use.
+- An **AI hub** resource group (`rg-ai-hub`), owned by the platform team. It holds the AI gateway (API Management) and Microsoft Foundry with the model deployments, plus the services that govern them: a registry, content safety, caching, PII processing and monitoring. Nobody else holds model credentials.
+- An **agent landing zone** resource group (`rg-ai-app`), where AI engineers build their apps and agents in their own Foundry projects. Their models come only from the hub, through the gateway, each project with its own identity, token limit and usage numbers.
+
+**Where agents run.** AI engineers can run Foundry-hosted agents in their Foundry project, or self-hosted agents on Azure Container Apps or AKS. Both are designed to call models through the AI hub gateway with an Entra identity that holds the gateway role.
 
 ### 2.1 Reference architecture
 
-The diagram shows the full picture. Blue is what Launchpad deploys. Grey is what your landing zone already provides. Dashed boxes are extension points that plug into the same design.
+Dashed boxes are optional. Items marked preview depend on Microsoft preview features.
 
 ```mermaid
 flowchart TB
-    eng["AI engineers<br/>Entra group"]
-    cicd["CI/CD<br/>GitHub Actions with OIDC"]
-    others["Dev and prod landing zones<br/>other apps and agents"]
+    eng["AI engineers"]
 
-    subgraph plat["Your platform landing zone"]
-        ent["Microsoft Entra ID<br/>gateway app, roles, groups"]
-        net["Connectivity hub<br/>firewall, DNS, VPN or ExpressRoute"]
-        dns["Private DNS zones"]
-        gov["Management-group policy<br/>Defender for Cloud, Purview"]
-        onprem["On-premises and other clouds"]
-    end
-
-    subgraph sub["AI subscription"]
-        subgraph sbx["AI sandbox resource group"]
-            app["Example AI app and agent<br/>Container Apps"]
-            mi["Managed identity per project<br/>with the gateway role"]
-            acr["Container registry"]
-            data["Team data stores<br/>Storage, AI Search, Cosmos DB"]
-        end
-
-        subgraph hub["AI hub resource group (platform team)"]
-            apim["API Management gateway<br/>authenticate, limit, meter, retry"]
-            fnd["Foundry account<br/>models, projects, Agent Service"]
-            agentdata["Agent state<br/>Cosmos DB, Storage, AI Search"]
-            kv["Key Vault<br/>third-party provider keys"]
-            mon["Log Analytics, Application Insights<br/>alerts and dashboards"]
-            pe["VNet and private endpoints"]
-        end
-
-        pol["Azure Policy and budgets"]
-    end
-
-    subgraph ext["Behind the gateway"]
-        fnd2["Second Foundry account<br/>another region"]
-        prov["Another model provider<br/>for example Compass"]
-        mcp["MCP tool servers"]
-    end
-
-    eng -.->|"Contributor on the sandbox only"| sbx
-    cicd -.-> hub
-    cicd -.-> sbx
-    mi -.-> app
-    app -.-> data
-    app -->|"Entra token"| apim
-    others -->|"Entra token, private"| apim
-    ent -.->|"validates tokens"| apim
-    apim -->|"managed identity"| fnd
-    fnd -.-> agentdata
-    apim -.-> kv
-    apim -.-> fnd2
-    apim -.-> prov
-    apim -.-> mcp
-    apim -.->|"usage per project"| mon
-    pe -.-> apim
-    pe -.-> fnd
-    dns -.-> pe
-    net -.-> pe
-    onprem -.-> net
-    gov -.-> sub
-    pol -.-> hub
-    pol -.-> sbx
-
-    classDef launchpad fill:#dbeafe,stroke:#1d4ed8,color:#111827
-    classDef platform fill:#e5e7eb,stroke:#6b7280,color:#111827
-    classDef extend fill:#ffffff,stroke:#6b7280,stroke-dasharray:5 3,color:#111827
-    class app,mi,acr,apim,fnd,mon,pe,pol launchpad
-    class ent,net,dns,gov,onprem platform
-    class eng,cicd,others,data,agentdata,kv,fnd2,prov,mcp extend
-```
-
-Extension points are designed into the gateway and the hub, so adding one does not change how projects call the gateway.
-
-| Extension point | Where it plugs in | Note |
-|---|---|---|
-| Second Foundry account or region | A backend pool behind the gateway, with one independent gateway per region | Stored responses (get, cancel, `previous_response_id`) must reach the backend that created them, so the gateway pins a client to its backend. |
-| Another model provider, for example Compass | A second API and backend on the same gateway, with its key in Key Vault | Callers keep one gateway and one identity. |
-| MCP tool servers | Published through the gateway, so agents call approved tools only | Same authentication and limits as the models. |
-| Foundry projects and hosted agents | In the hub's Foundry account, with the Agent Service on the private network | The agents use your own Cosmos DB, Storage and AI Search for state. |
-| Dev and prod landing zones | Call the gateway over its private endpoint | Each app gets its own identity and gateway role. |
-| Team data stores | In the sandbox group, behind private endpoints | Owned by the AI engineers. |
-| CI/CD | A pipeline with OIDC deploys the hub and the sandbox from pull requests | Adding a project is a pull request. |
-
-### 2.2 What is deployed
-
-| Where | Resources | Purpose |
-|---|---|---|
-| AI hub resource group | API Management (Standard v2) with the Responses API | The one governed entry point: five operations, streaming, background mode |
-| | Foundry account, project and model deployment | The models. API keys are off, and only the gateway's identity can call it. |
-| | Log Analytics, Application Insights, alerts on `429` and `5xx` | Gateway logs, usage per project, throttling alerts |
-| AI sandbox resource group | Container Apps environment and a container registry | Where AI engineers host their apps and agents |
-| | A managed identity per project, with the gateway role | The identity the gateway limits and meters |
-| | The example AI app and agent | A small chat app with one Microsoft Agent Framework agent, to copy and extend |
-| Microsoft Entra ID | The gateway app registration with its app role, and an Entra group for AI engineers | Who may call the gateway, and who may work in the sandbox |
-| Subscription | Azure Policy assignments and budgets | Guardrails, scoped to each resource group |
-
-### 2.3 How a request flows
-
-1. The app asks Microsoft Entra ID for a token for the gateway, using its project's managed identity.
-2. It calls the gateway on the Responses API with that token.
-3. The gateway checks the token and the gateway role, and learns which project is calling.
-4. It applies that project's token limit. Over the limit, the project gets `429` with `Retry-After`; other projects are not affected.
-5. The gateway calls Foundry with its own managed identity, retries a short `429` or `503`, and streams the answer back without buffering.
-6. Token usage is recorded under the project's identity, for showback and alerts.
-
-### 2.4 Identity and access
-
-| Who | Gets | Where |
-|---|---|---|
-| Platform team | Owner, or Contributor plus User Access Administrator | The AI hub resource group |
-| AI engineers (Entra group) | Contributor | The AI sandbox resource group only |
-| A project's managed identity | The gateway app role, which lets it call the gateway and nothing else | The gateway |
-| The gateway (APIM managed identity) | Cognitive Services OpenAI User | The Foundry account only |
-
-AI engineers never see a model credential. Foundry API keys are disabled, so the gateway is the only way to the models.
-
-### 2.5 Governance and operations
-
-- **Azure Policy.** Required tags and allowed regions on both groups. In the sandbox, a deny rule for creating Foundry or Azure OpenAI accounts, so nobody can bypass the gateway. On the hub, Private Link required, local authentication disabled and network access restricted.
-- **Limits.** A token limit per project protects the shared model quota. The limits are set against the capacity of the model deployment.
-- **Cost.** A budget with alerts on the sandbox, and a tag with an expiry date for cleanup.
-- **Observability.** Token usage per project, gateway logs and alerts on throttling and errors.
-
-### 2.6 Network profiles
-
-The same design runs in two profiles.
-
-| | `open` | `private` |
-|---|---|---|
-| Endpoints | Public | Private endpoints, public access off |
-| Caller authentication | Entra token | Entra token |
-| Intended for | A first trial with non-confidential data | Real use inside a landing zone |
-
-```mermaid
-flowchart LR
     subgraph sub["One Azure subscription"]
-        subgraph sbx["AI sandbox resource group"]
-            app["Example AI app and agent<br/>Container Apps in the sandbox subnet"]
+        subgraph net["rg-network: network (platform team)"]
+            vnet["Spoke VNet, subnets, NSGs,<br/>private DNS zones"]
         end
 
-        subgraph hub["AI hub resource group"]
-            subgraph vnet["Hub VNet"]
-                pe1["Private endpoint: gateway"]
-                apim["APIM Standard v2<br/>VNet integration<br/>public access off"]
-                pe2["Private endpoint: Foundry"]
-            end
-            fnd["Foundry account<br/>public access off, keys off"]
+        subgraph hub["rg-ai-hub: AI hub (platform team)"]
+            apim["API Management: AI gateway<br/>models, APIs, MCP servers, A2A agents"]
+            fnd["Foundry account and project<br/>model deployments<br/>Foundry Control Plane (preview)"]
+            reg["API Center<br/>registry"]
+            safety["Content Safety"]
+            cache["Semantic cache<br/>Managed Redis"]
+            pii["PII processing"]
+            mon["Log Analytics, Application Insights,<br/>alerts"]
+        end
+
+        subgraph app["rg-ai-app: agent landing zone (AI engineers)"]
+            afnd["Foundry account<br/>project per app: evaluations, tracing"]
+            hosted["Foundry hosted agents"]
+            selfh["Self-hosted agents<br/>Container Apps or AKS"]
+            adata["Agent Service and app data<br/>AI Search, Storage, Cosmos DB"]
+            acr["Container Registry"]
+            mi["Managed identity per project"]
+            kv["Key Vault"]
+            amon["Log Analytics, Application Insights"]
         end
     end
 
-    dns["Private DNS zones<br/>azure-api.net, cognitiveservices,<br/>openai, services.ai"]
-    fw["Firewall and egress<br/>from your landing zone"]
+    subgraph tenant["Your tenant and platform (not deployed by Launchpad)"]
+        idl["Agent identity<br/>Microsoft Agent 365 (preview)"]
+        sec["Foundational security<br/>Defender, Entra ID, Purview"]
+        mgmt["Management<br/>Azure Policy, Azure Monitor"]
+    end
 
-    app -->|"private"| pe1 --> apim
-    apim --> pe2 --> fnd
-    dns -.-> vnet
-    app -.-> fw
+    eng -->|"build and deploy"| app
+    selfh -->|"Entra token"| apim
+    hosted -->|"gateway"| apim
+    afnd -->|"gateway connection"| apim
+    apim -->|"managed identity"| fnd
+    apim -.-> reg
+    apim -.-> safety
+    apim -.-> cache
+    apim -.-> pii
+    apim -.->|"usage per project"| mon
+    mi -.-> selfh
+    acr -.-> selfh
+    selfh -.-> adata
+    afnd -.-> adata
+    vnet -.->|"private endpoints"| hub
+    vnet -.->|"private endpoints"| app
+    tenant -.->|"governs"| sub
+
+    classDef optional fill:#ffffff,stroke:#6b7280,stroke-dasharray:5 3,color:#111827
+    classDef platform fill:#e5e7eb,stroke:#6b7280,color:#111827
+    class reg,safety,cache,pii,hosted optional
+    class idl,sec,mgmt platform
 ```
 
-In the `private` profile the hub holds one VNet with a subnet for the gateway's outbound traffic, one for the private endpoints and one for the sandbox. Public access to the gateway is switched off after its private endpoint exists. Private DNS zones come from your platform team, or are created here if you have none.
+### 2.2 What each resource group has
 
-### 2.7 What you provide
-
-Launchpad deploys a workload, so your environment supplies what a landing zone normally supplies.
-
-- An Azure subscription, with the resource providers registered and quota for the model.
-- Permission in Microsoft Entra ID to create an app registration and a group.
-- For the `private` profile: address space for the VNet, private DNS zones, and egress through your firewall.
-- Any management-group policy and Defender settings your organization already applies.
-
-### 2.8 Key decisions
-
-| Decision | Choice | Why |
+| Resource group | Owner | What it has |
 |---|---|---|
-| Subscriptions | One, as the reference | It is the simplest to read and deploy. The hub and the sandbox can sit in different subscriptions, and the gateway is reached over a private endpoint. |
-| Isolation between projects | An identity per project in one sandbox group | One identity gives each project its own limit and usage. Teams that need hard isolation of their resources add a sandbox group per team from the same template. |
-| Gateway | API Management Standard v2 | It is the minimum tier that supports a private endpoint, VNet integration and zone redundancy. |
-| Authentication | Entra ID tokens, no shared keys | There is no secret to leak or rotate, and every call is attributable to a project. |
-| Hosting for apps and agents | Azure Container Apps | A common fit for agents, scales to zero and works with managed identity. Teams are free to host elsewhere. |
-| Agents | Code-first agents in the sandbox that call the gateway | Foundry projects and hosted agents can be added in the hub account later without changing the gateway. |
+| **rg-network** (network) | Platform team | **Network:** spoke VNet with peering to the hub, an NSG on each subnet, and a route table sending egress to the hub firewall.<br>**Subnets:** gateway outbound (`Microsoft.Web/serverFarms`), private endpoints, agent apps (`Microsoft.App/environments`), Foundry agent (`Microsoft.App/environments`, `/24`), and AKS if used.<br>**Private DNS zones with VNet links:** `azure-api.net`, `cognitiveservices`, `openai`, `services.ai`, `search`, `documents` (Cosmos DB), `blob`, `azurecr`, `vaultcore`, and the region's `azurecontainerapps.io`. |
+| **rg-ai-hub** (AI hub) | Platform team | **AI gateway:** API Management Standard v2, serving models, APIs, MCP servers and A2A agents, with the Responses API and chat completions.<br>**Models:** Foundry account and project with the model deployments. Foundry Control Plane is a Foundry portal capability (preview).<br>**Governance services:** API Center as the registry, Content Safety, and optionally a semantic cache (Azure Managed Redis with an embeddings deployment) and PII processing.<br>**Identity:** the gateway's managed identity, with the OpenAI User role on Foundry.<br>**Operations:** Log Analytics, Application Insights and alerts. |
+| **rg-ai-app** (agent landing zone) | AI engineers | **Foundry for development:** a Foundry account with a project per app, for evaluations and tracing. Models come from the hub through the gateway. Hosted agents run here, with the Agent Service's own AI Search, Storage and Cosmos DB.<br>**Self-hosted agents:** a Container Apps environment (or AKS) with the example AI app and agent, and Container Registry Premium.<br>**Identity:** a user-assigned managed identity per project, with the gateway role.<br>**Operations:** Log Analytics, Application Insights and Key Vault.<br>**Optional:** the team's own data stores. |
+
+Each service in the AI hub and the agent landing zone has a private endpoint, placed in the private endpoints subnet of rg-network.
+
+### 2.3 Provided by your tenant and platform
+
+Launchpad does not deploy the layer at the bottom of the diagram. It assumes your organization already has it.
+
+| Layer | Services |
+|---|---|
+| **Agent identity** | Microsoft Agent 365 (preview) |
+| **Foundational security** | Microsoft Defender, Microsoft Entra ID and Microsoft Purview |
+| **Management** | Azure Policy and Azure Monitor |
+
+**Out of scope.** This repo does not cover the platform landing zone, Microsoft Entra ID setup, Azure Policy or GitHub. It assumes you already have them and deploys the AI hub and the agent landing zone on top. It also does not deploy user-facing ingress such as Application Gateway with a WAF, knowledge and grounding sources, or a second region.
