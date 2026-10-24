@@ -9,7 +9,7 @@ A rapid-innovation sandbox that lets AI engineers start building on Microsoft Fo
 **What you get**
 
 - **AI engineers** start on day one with one gateway URL and one identity.
-- **The platform team** stays in control: no model keys outside the hub, a limit per project, usage per project for showback, and one governed gateway for every call.
+- **The platform team** stays in control: no model keys held by AI engineers, a limit per project, usage per project for showback, and one governed gateway for every call.
 - **Security** gets a defensible baseline: calls authenticated with Entra ID tokens, managed identity to the model, and private networking.
 
 **What this is not.** It is not a platform landing zone. It is a workload that you deploy into your own Azure environment, on top of the landing zone you already run.
@@ -28,7 +28,7 @@ To keep this reference simple, it uses one Azure subscription with three resourc
 
 ### 2.1 Reference architecture
 
-Dashed boxes are optional. Items marked preview depend on Microsoft preview features.
+Dashed boxes are optional. Items marked preview depend on Microsoft preview features. An editable copy of this diagram is in [`docs/reference-architecture.canvas`](docs/reference-architecture.canvas), which you can open in Obsidian.
 
 ```mermaid
 flowchart TB
@@ -62,7 +62,7 @@ flowchart TB
     end
 
     subgraph tenant["Your tenant and platform (not deployed by Launchpad)"]
-        idl["Agent identity<br/>Microsoft Agent 365 (preview)"]
+        idl["Agent identity<br/>Microsoft Agent 365"]
         sec["Foundational security<br/>Defender, Entra ID, Purview"]
         mgmt["Management<br/>Azure Policy, Azure Monitor"]
     end
@@ -99,7 +99,7 @@ flowchart TB
 | **rg-ai-hub** (AI hub) | Platform team | **AI gateway:** API Management Standard v2, serving models, APIs, MCP servers and A2A agents, with the Responses API and chat completions.<br>**Models:** Foundry account and project with the model deployments. Foundry Control Plane is a Foundry portal capability (preview).<br>**Governance services:** API Center as the registry, Content Safety, and optionally a semantic cache (Azure Managed Redis with an embeddings deployment) and PII processing.<br>**Identity:** the gateway's managed identity, with the OpenAI User role on Foundry.<br>**Operations:** Log Analytics, Application Insights and alerts. |
 | **rg-ai-app** (agent landing zone) | AI engineers | **Foundry for development:** a Foundry account with a project per app, for evaluations and tracing. Models come from the hub through the gateway. Hosted agents run here, with the Agent Service's own AI Search, Storage and Cosmos DB.<br>**Self-hosted agents:** a Container Apps environment (or AKS) with the example AI app and agent, and Container Registry Premium.<br>**Identity:** a user-assigned managed identity per project, with the gateway role.<br>**Operations:** Log Analytics, Application Insights and Key Vault.<br>**Optional:** the team's own data stores. |
 
-Each service in the AI hub and the agent landing zone has a private endpoint, placed in the private endpoints subnet of rg-network.
+Each service in the AI hub and the agent landing zone that supports a private endpoint has one, placed in the private endpoints subnet of rg-network.
 
 ### 2.3 Provided by your tenant and platform
 
@@ -107,7 +107,7 @@ Launchpad does not deploy the layer at the bottom of the diagram. It assumes you
 
 | Layer | Services |
 |---|---|
-| **Agent identity** | Microsoft Agent 365 (preview) |
+| **Agent identity** | Microsoft Agent 365 |
 | **Foundational security** | Microsoft Defender, Microsoft Entra ID and Microsoft Purview |
 | **Management** | Azure Policy and Azure Monitor |
 

@@ -1,0 +1,371 @@
+{
+	"nodes": [
+		{
+			"id": "grp_sub",
+			"type": "group",
+			"x": -40,
+			"y": 60,
+			"width": 2080,
+			"height": 850,
+			"label": "One Azure subscription"
+		},
+		{
+			"id": "grp_net",
+			"type": "group",
+			"x": 0,
+			"y": 120,
+			"width": 360,
+			"height": 420,
+			"label": "rg-network: network (platform team)",
+			"color": "6"
+		},
+		{
+			"id": "grp_hub",
+			"type": "group",
+			"x": 420,
+			"y": 120,
+			"width": 760,
+			"height": 740,
+			"label": "rg-ai-hub: AI hub (platform team)",
+			"color": "5"
+		},
+		{
+			"id": "grp_app",
+			"type": "group",
+			"x": 1240,
+			"y": 120,
+			"width": 760,
+			"height": 740,
+			"label": "rg-ai-app: agent landing zone (AI engineers)",
+			"color": "4"
+		},
+		{
+			"id": "grp_tenant",
+			"type": "group",
+			"x": -40,
+			"y": 980,
+			"width": 2080,
+			"height": 230,
+			"label": "Your tenant and platform (not deployed by Launchpad)"
+		},
+		{
+			"id": "eng",
+			"type": "text",
+			"text": "AI engineers",
+			"x": 1460,
+			"y": -90,
+			"width": 320,
+			"height": 80
+		},
+		{
+			"id": "vnet",
+			"type": "text",
+			"text": "Spoke VNet, subnets, NSGs,\nprivate DNS zones",
+			"x": 30,
+			"y": 200,
+			"width": 300,
+			"height": 140,
+			"color": "6"
+		},
+		{
+			"id": "apim",
+			"type": "text",
+			"text": "API Management: AI gateway\nmodels, APIs, MCP servers, A2A agents",
+			"x": 450,
+			"y": 190,
+			"width": 690,
+			"height": 110,
+			"color": "5"
+		},
+		{
+			"id": "fnd",
+			"type": "text",
+			"text": "Foundry account and project\nmodel deployments\nFoundry Control Plane (preview)",
+			"x": 450,
+			"y": 340,
+			"width": 320,
+			"height": 130,
+			"color": "5"
+		},
+		{
+			"id": "reg",
+			"type": "text",
+			"text": "API Center, registry\n(optional)",
+			"x": 820,
+			"y": 340,
+			"width": 320,
+			"height": 130,
+			"color": "5"
+		},
+		{
+			"id": "safety",
+			"type": "text",
+			"text": "Content Safety\n(optional)",
+			"x": 450,
+			"y": 510,
+			"width": 320,
+			"height": 110,
+			"color": "5"
+		},
+		{
+			"id": "cache",
+			"type": "text",
+			"text": "Semantic cache, Managed Redis\n(optional)",
+			"x": 820,
+			"y": 510,
+			"width": 320,
+			"height": 110,
+			"color": "5"
+		},
+		{
+			"id": "pii",
+			"type": "text",
+			"text": "PII processing\n(optional)",
+			"x": 450,
+			"y": 650,
+			"width": 320,
+			"height": 110,
+			"color": "5"
+		},
+		{
+			"id": "mon",
+			"type": "text",
+			"text": "Log Analytics, Application Insights,\nalerts",
+			"x": 820,
+			"y": 650,
+			"width": 320,
+			"height": 110,
+			"color": "5"
+		},
+		{
+			"id": "afnd",
+			"type": "text",
+			"text": "Foundry account\nproject per app: evaluations, tracing",
+			"x": 1270,
+			"y": 190,
+			"width": 320,
+			"height": 130,
+			"color": "4"
+		},
+		{
+			"id": "hosted",
+			"type": "text",
+			"text": "Foundry hosted agents\n(optional)",
+			"x": 1640,
+			"y": 190,
+			"width": 320,
+			"height": 130,
+			"color": "4"
+		},
+		{
+			"id": "selfh",
+			"type": "text",
+			"text": "Self-hosted agents\nContainer Apps or AKS",
+			"x": 1270,
+			"y": 360,
+			"width": 320,
+			"height": 130,
+			"color": "4"
+		},
+		{
+			"id": "acr",
+			"type": "text",
+			"text": "Container Registry",
+			"x": 1640,
+			"y": 360,
+			"width": 320,
+			"height": 110,
+			"color": "4"
+		},
+		{
+			"id": "mi",
+			"type": "text",
+			"text": "Managed identity per project",
+			"x": 1270,
+			"y": 530,
+			"width": 320,
+			"height": 100,
+			"color": "4"
+		},
+		{
+			"id": "adata",
+			"type": "text",
+			"text": "Agent Service and app data\nAI Search, Storage, Cosmos DB",
+			"x": 1640,
+			"y": 510,
+			"width": 320,
+			"height": 130,
+			"color": "4"
+		},
+		{
+			"id": "kv",
+			"type": "text",
+			"text": "Key Vault",
+			"x": 1270,
+			"y": 670,
+			"width": 320,
+			"height": 90,
+			"color": "4"
+		},
+		{
+			"id": "amon",
+			"type": "text",
+			"text": "Log Analytics, Application Insights",
+			"x": 1640,
+			"y": 670,
+			"width": 320,
+			"height": 100,
+			"color": "4"
+		},
+		{
+			"id": "idl",
+			"type": "text",
+			"text": "Agent identity\nMicrosoft Agent 365",
+			"x": 0,
+			"y": 1050,
+			"width": 620,
+			"height": 110
+		},
+		{
+			"id": "sec",
+			"type": "text",
+			"text": "Foundational security\nDefender, Entra ID, Purview",
+			"x": 680,
+			"y": 1050,
+			"width": 620,
+			"height": 110
+		},
+		{
+			"id": "mgmt",
+			"type": "text",
+			"text": "Management\nAzure Policy, Azure Monitor",
+			"x": 1360,
+			"y": 1050,
+			"width": 620,
+			"height": 110
+		}
+	],
+	"edges": [
+		{
+			"id": "e1",
+			"fromNode": "eng",
+			"fromSide": "bottom",
+			"toNode": "grp_app",
+			"toSide": "top",
+			"label": "build and deploy"
+		},
+		{
+			"id": "e2",
+			"fromNode": "selfh",
+			"fromSide": "left",
+			"toNode": "apim",
+			"toSide": "right",
+			"label": "Entra token"
+		},
+		{
+			"id": "e3",
+			"fromNode": "hosted",
+			"fromSide": "left",
+			"toNode": "apim",
+			"toSide": "right",
+			"label": "gateway"
+		},
+		{
+			"id": "e4",
+			"fromNode": "afnd",
+			"fromSide": "left",
+			"toNode": "apim",
+			"toSide": "right",
+			"label": "gateway connection"
+		},
+		{
+			"id": "e5",
+			"fromNode": "apim",
+			"fromSide": "bottom",
+			"toNode": "fnd",
+			"toSide": "top",
+			"label": "managed identity"
+		},
+		{
+			"id": "e6",
+			"fromNode": "apim",
+			"fromSide": "bottom",
+			"toNode": "reg",
+			"toSide": "top"
+		},
+		{
+			"id": "e7",
+			"fromNode": "apim",
+			"fromSide": "left",
+			"toNode": "safety",
+			"toSide": "left"
+		},
+		{
+			"id": "e8",
+			"fromNode": "apim",
+			"fromSide": "right",
+			"toNode": "cache",
+			"toSide": "right"
+		},
+		{
+			"id": "e9",
+			"fromNode": "apim",
+			"fromSide": "left",
+			"toNode": "pii",
+			"toSide": "left"
+		},
+		{
+			"id": "e15",
+			"fromNode": "apim",
+			"fromSide": "right",
+			"toNode": "mon",
+			"toSide": "right",
+			"label": "usage per project"
+		},
+		{
+			"id": "e16",
+			"fromNode": "vnet",
+			"fromSide": "bottom",
+			"toNode": "grp_app",
+			"toSide": "bottom",
+			"label": "private endpoints"
+		},
+		{
+			"id": "e10",
+			"fromNode": "vnet",
+			"fromSide": "right",
+			"toNode": "grp_hub",
+			"toSide": "left",
+			"label": "private endpoints"
+		},
+		{
+			"id": "e11",
+			"fromNode": "grp_tenant",
+			"fromSide": "top",
+			"toNode": "grp_sub",
+			"toSide": "bottom",
+			"label": "governs"
+		},
+		{
+			"id": "e12",
+			"fromNode": "mi",
+			"fromSide": "top",
+			"toNode": "selfh",
+			"toSide": "bottom"
+		},
+		{
+			"id": "e13",
+			"fromNode": "acr",
+			"fromSide": "left",
+			"toNode": "selfh",
+			"toSide": "right"
+		},
+		{
+			"id": "e14",
+			"fromNode": "selfh",
+			"fromSide": "bottom",
+			"toNode": "adata",
+			"toSide": "left"
+		}
+	]
+}
