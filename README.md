@@ -31,64 +31,96 @@ To keep this reference simple, it uses one Azure subscription with three resourc
 Dashed boxes are optional. Items marked preview depend on Microsoft preview features. An editable copy of this diagram is in [`docs/reference-architecture.canvas`](docs/reference-architecture.canvas), which you can open in Obsidian.
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#ffffff", "primaryTextColor": "#0f172a", "primaryBorderColor": "#94a3b8", "lineColor": "#64748b", "clusterBkg": "#f8fafc", "clusterBorder": "#cbd5e1", "edgeLabelBackground": "#ffffff"}, "flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 48, "padding": 24, "htmlLabels": true, "wrappingWidth": 1400}}}%%
 flowchart TB
-    eng["AI engineers"]
+    eng(["AI engineers"])
 
     subgraph sub["One Azure subscription"]
-        subgraph net["rg-network: network (platform team)"]
-            vnet["Spoke VNet, subnets, NSGs,<br/>private DNS zones"]
+        direction TB
+
+        subgraph net["rg-network  ·  network  ·  platform team"]
+            direction LR
+            vnet("Spoke VNet<br/>subnets, NSGs, route table")
+            dns("Private DNS zones")
         end
 
-        subgraph hub["rg-ai-hub: AI hub (platform team)"]
-            apim["API Management: AI gateway<br/>models, APIs, MCP servers, A2A agents"]
-            fnd["Foundry account and project<br/>model deployments<br/>Foundry Control Plane (preview)"]
-            reg["API Center<br/>registry"]
-            safety["Content Safety"]
-            cache["Semantic cache<br/>Managed Redis"]
-            pii["PII processing"]
-            mon["Log Analytics, Application Insights,<br/>alerts"]
-        end
+        subgraph work["Workload resource groups"]
+            direction LR
 
-        subgraph app["rg-ai-app: agent landing zone (AI engineers)"]
-            afnd["Foundry account<br/>project per app: evaluations, tracing"]
-            hosted["Foundry hosted agents"]
-            selfh["Self-hosted agents<br/>Container Apps or AKS"]
-            adata["Agent Service and app data<br/>AI Search, Storage, Cosmos DB"]
-            acr["Container Registry"]
-            mi["Managed identity per project"]
-            kv["Key Vault"]
-            amon["Log Analytics, Application Insights"]
+            subgraph app["rg-ai-app  ·  agent landing zone  ·  AI engineers"]
+                direction TB
+                subgraph appfnd["Foundry"]
+                    direction LR
+                    afnd("Foundry account<br/>project per app<br/>evaluations, tracing")
+                    hosted("Foundry hosted agents")
+                end
+                subgraph apphost["Where agents run"]
+                    direction LR
+                    selfh("Self-hosted agents<br/>Container Apps or AKS")
+                    acr("Container Registry")
+                    mi("Managed identity<br/>per project")
+                end
+                subgraph appdata["Data and operations"]
+                    direction LR
+                    adata("Agent Service and app data<br/>AI Search, Storage, Cosmos DB")
+                    kv("Key Vault")
+                    amon("Log Analytics<br/>Application Insights")
+                end
+            end
+
+            subgraph hub["rg-ai-hub  ·  AI hub  ·  platform team"]
+                direction TB
+                apim("API Management: AI gateway<br/>models, APIs, MCP servers, A2A agents")
+                subgraph hubcore["Models and operations"]
+                    direction LR
+                    fnd("Foundry account and project<br/>model deployments<br/>Control Plane (preview)")
+                    mon("Log Analytics<br/>Application Insights, alerts")
+                end
+                subgraph gov["Governance services"]
+                    direction LR
+                    reg("API Center<br/>registry")
+                    safety("Content Safety")
+                    cache("Semantic cache<br/>Managed Redis")
+                    pii("PII processing")
+                end
+                apim --> hubcore
+                apim -.-> gov
+            end
         end
     end
 
-    subgraph tenant["Your tenant and platform (not deployed by Launchpad)"]
-        idl["Agent identity<br/>Microsoft Agent 365"]
-        sec["Foundational security<br/>Defender, Entra ID, Purview"]
-        mgmt["Management<br/>Azure Policy, Azure Monitor"]
-    end
+    tenant("Your tenant and platform  ·  not deployed by Launchpad<br/>Agent identity: Microsoft Agent 365   |   Foundational security: Defender, Entra ID, Purview   |   Management: Azure Policy, Azure Monitor")
 
-    eng -->|"build and deploy"| app
-    selfh -->|"Entra token"| apim
-    hosted -->|"gateway"| apim
-    afnd -->|"gateway connection"| apim
-    apim -->|"managed identity"| fnd
-    apim -.-> reg
-    apim -.-> safety
-    apim -.-> cache
-    apim -.-> pii
-    apim -.->|"usage per project"| mon
-    mi -.-> selfh
-    acr -.-> selfh
-    selfh -.-> adata
-    afnd -.-> adata
-    vnet -.->|"private endpoints"| hub
-    vnet -.->|"private endpoints"| app
-    tenant -.->|"governs"| sub
+    eng --> sub
+    net -.->|"private endpoints"| work
+    app -->|"Entra token<br/>gateway connection"| hub
+    sub ~~~ tenant
 
-    classDef optional fill:#ffffff,stroke:#6b7280,stroke-dasharray:5 3,color:#111827
-    classDef platform fill:#e5e7eb,stroke:#6b7280,color:#111827
-    class reg,safety,cache,pii,hosted optional
-    class idl,sec,mgmt platform
+    classDef netc fill:#ffffff,stroke:#6366f1,stroke-width:1.5px,color:#1e1b4b
+    classDef hubc fill:#ffffff,stroke:#2563eb,stroke-width:1.5px,color:#172554
+    classDef appc fill:#ffffff,stroke:#0d9488,stroke-width:1.5px,color:#134e4a
+    classDef optc fill:#ffffff,stroke:#2563eb,stroke-width:1.5px,stroke-dasharray:5 3,color:#172554
+    classDef optapp fill:#ffffff,stroke:#0d9488,stroke-width:1.5px,stroke-dasharray:5 3,color:#134e4a
+    classDef platc fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+    classDef person fill:#0f172a,stroke:#0f172a,color:#ffffff
+    class vnet,dns netc
+    class apim,fnd,mon hubc
+    class reg,safety,cache,pii optc
+    class afnd,selfh,acr,mi,adata,kv,amon appc
+    class hosted optapp
+    class tenant platc
+    class eng person
+
+    style sub fill:#ffffff,stroke:#334155,stroke-width:2px,color:#0f172a
+    style work fill:#ffffff,stroke:#cbd5e1,stroke-dasharray:5 3,color:#475569
+    style net fill:#eef2ff,stroke:#6366f1,stroke-width:2px,color:#1e1b4b
+    style hub fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#172554
+    style app fill:#f0fdfa,stroke:#0d9488,stroke-width:2px,color:#134e4a
+    style hubcore fill:#dbeafe,stroke:#93c5fd,color:#172554
+    style gov fill:#dbeafe,stroke:#93c5fd,stroke-dasharray:5 3,color:#172554
+    style appfnd fill:#ccfbf1,stroke:#5eead4,color:#134e4a
+    style apphost fill:#ccfbf1,stroke:#5eead4,color:#134e4a
+    style appdata fill:#ccfbf1,stroke:#5eead4,color:#134e4a
 ```
 
 ### 2.2 What each resource group has

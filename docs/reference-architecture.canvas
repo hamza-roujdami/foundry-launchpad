@@ -1,371 +1,49 @@
 {
 	"nodes": [
-		{
-			"id": "grp_sub",
-			"type": "group",
-			"x": -40,
-			"y": 60,
-			"width": 2080,
-			"height": 850,
-			"label": "One Azure subscription"
-		},
-		{
-			"id": "grp_net",
-			"type": "group",
-			"x": 0,
-			"y": 120,
-			"width": 360,
-			"height": 420,
-			"label": "rg-network: network (platform team)",
-			"color": "6"
-		},
-		{
-			"id": "grp_hub",
-			"type": "group",
-			"x": 420,
-			"y": 120,
-			"width": 760,
-			"height": 740,
-			"label": "rg-ai-hub: AI hub (platform team)",
-			"color": "5"
-		},
-		{
-			"id": "grp_app",
-			"type": "group",
-			"x": 1240,
-			"y": 120,
-			"width": 760,
-			"height": 740,
-			"label": "rg-ai-app: agent landing zone (AI engineers)",
-			"color": "4"
-		},
-		{
-			"id": "grp_tenant",
-			"type": "group",
-			"x": -40,
-			"y": 980,
-			"width": 2080,
-			"height": 230,
-			"label": "Your tenant and platform (not deployed by Launchpad)"
-		},
-		{
-			"id": "eng",
-			"type": "text",
-			"text": "AI engineers",
-			"x": 1460,
-			"y": -90,
-			"width": 320,
-			"height": 80
-		},
-		{
-			"id": "vnet",
-			"type": "text",
-			"text": "Spoke VNet, subnets, NSGs,\nprivate DNS zones",
-			"x": 30,
-			"y": 200,
-			"width": 300,
-			"height": 140,
-			"color": "6"
-		},
-		{
-			"id": "apim",
-			"type": "text",
-			"text": "API Management: AI gateway\nmodels, APIs, MCP servers, A2A agents",
-			"x": 450,
-			"y": 190,
-			"width": 690,
-			"height": 110,
-			"color": "5"
-		},
-		{
-			"id": "fnd",
-			"type": "text",
-			"text": "Foundry account and project\nmodel deployments\nFoundry Control Plane (preview)",
-			"x": 450,
-			"y": 340,
-			"width": 320,
-			"height": 130,
-			"color": "5"
-		},
-		{
-			"id": "reg",
-			"type": "text",
-			"text": "API Center, registry\n(optional)",
-			"x": 820,
-			"y": 340,
-			"width": 320,
-			"height": 130,
-			"color": "5"
-		},
-		{
-			"id": "safety",
-			"type": "text",
-			"text": "Content Safety\n(optional)",
-			"x": 450,
-			"y": 510,
-			"width": 320,
-			"height": 110,
-			"color": "5"
-		},
-		{
-			"id": "cache",
-			"type": "text",
-			"text": "Semantic cache, Managed Redis\n(optional)",
-			"x": 820,
-			"y": 510,
-			"width": 320,
-			"height": 110,
-			"color": "5"
-		},
-		{
-			"id": "pii",
-			"type": "text",
-			"text": "PII processing\n(optional)",
-			"x": 450,
-			"y": 650,
-			"width": 320,
-			"height": 110,
-			"color": "5"
-		},
-		{
-			"id": "mon",
-			"type": "text",
-			"text": "Log Analytics, Application Insights,\nalerts",
-			"x": 820,
-			"y": 650,
-			"width": 320,
-			"height": 110,
-			"color": "5"
-		},
-		{
-			"id": "afnd",
-			"type": "text",
-			"text": "Foundry account\nproject per app: evaluations, tracing",
-			"x": 1270,
-			"y": 190,
-			"width": 320,
-			"height": 130,
-			"color": "4"
-		},
-		{
-			"id": "hosted",
-			"type": "text",
-			"text": "Foundry hosted agents\n(optional)",
-			"x": 1640,
-			"y": 190,
-			"width": 320,
-			"height": 130,
-			"color": "4"
-		},
-		{
-			"id": "selfh",
-			"type": "text",
-			"text": "Self-hosted agents\nContainer Apps or AKS",
-			"x": 1270,
-			"y": 360,
-			"width": 320,
-			"height": 130,
-			"color": "4"
-		},
-		{
-			"id": "acr",
-			"type": "text",
-			"text": "Container Registry",
-			"x": 1640,
-			"y": 360,
-			"width": 320,
-			"height": 110,
-			"color": "4"
-		},
-		{
-			"id": "mi",
-			"type": "text",
-			"text": "Managed identity per project",
-			"x": 1270,
-			"y": 530,
-			"width": 320,
-			"height": 100,
-			"color": "4"
-		},
-		{
-			"id": "adata",
-			"type": "text",
-			"text": "Agent Service and app data\nAI Search, Storage, Cosmos DB",
-			"x": 1640,
-			"y": 510,
-			"width": 320,
-			"height": 130,
-			"color": "4"
-		},
-		{
-			"id": "kv",
-			"type": "text",
-			"text": "Key Vault",
-			"x": 1270,
-			"y": 670,
-			"width": 320,
-			"height": 90,
-			"color": "4"
-		},
-		{
-			"id": "amon",
-			"type": "text",
-			"text": "Log Analytics, Application Insights",
-			"x": 1640,
-			"y": 670,
-			"width": 320,
-			"height": 100,
-			"color": "4"
-		},
-		{
-			"id": "idl",
-			"type": "text",
-			"text": "Agent identity\nMicrosoft Agent 365",
-			"x": 0,
-			"y": 1050,
-			"width": 620,
-			"height": 110
-		},
-		{
-			"id": "sec",
-			"type": "text",
-			"text": "Foundational security\nDefender, Entra ID, Purview",
-			"x": 680,
-			"y": 1050,
-			"width": 620,
-			"height": 110
-		},
-		{
-			"id": "mgmt",
-			"type": "text",
-			"text": "Management\nAzure Policy, Azure Monitor",
-			"x": 1360,
-			"y": 1050,
-			"width": 620,
-			"height": 110
-		}
+		{"id": "grp_sub", "type": "group", "label": "One Azure subscription", "x": 0, "y": 0, "width": 2000, "height": 1220, "color": "#334155"},
+		{"id": "grp_net", "type": "group", "label": "rg-network  ·  network  ·  platform team", "x": 640, "y": 60, "width": 720, "height": 240, "color": "#6366f1"},
+		{"id": "grp_work", "type": "group", "label": "Workload resource groups", "x": 20, "y": 340, "width": 1960, "height": 840, "color": "#cbd5e1"},
+		{"id": "grp_app", "type": "group", "label": "rg-ai-app  ·  agent landing zone  ·  AI engineers", "x": 40, "y": 380, "width": 1000, "height": 760, "color": "#0d9488"},
+		{"id": "g_appfnd", "type": "group", "label": "Foundry", "x": 60, "y": 440, "width": 960, "height": 200, "color": "#5eead4"},
+		{"id": "g_apphost", "type": "group", "label": "Where agents run", "x": 60, "y": 660, "width": 960, "height": 200, "color": "#5eead4"},
+		{"id": "g_appdata", "type": "group", "label": "Data and operations", "x": 60, "y": 880, "width": 960, "height": 200, "color": "#5eead4"},
+		{"id": "grp_hub", "type": "group", "label": "rg-ai-hub  ·  AI hub  ·  platform team", "x": 1160, "y": 380, "width": 800, "height": 760, "color": "#2563eb"},
+		{"id": "g_hubcore", "type": "group", "label": "Models and operations", "x": 1180, "y": 620, "width": 760, "height": 190, "color": "#93c5fd"},
+		{"id": "g_gov", "type": "group", "label": "Governance services (optional)", "x": 1180, "y": 830, "width": 760, "height": 290, "color": "#93c5fd"},
+		{"id": "grp_tenant", "type": "group", "label": "Your tenant and platform  ·  not deployed by Launchpad", "x": 0, "y": 1290, "width": 2000, "height": 210, "color": "#64748b"},
+
+		{"id": "eng", "type": "text", "text": "AI engineers", "x": 880, "y": -110, "width": 240, "height": 70, "color": "#0f172a"},
+
+		{"id": "vnet", "type": "text", "text": "Spoke VNet\nsubnets, NSGs, route table", "x": 680, "y": 130, "width": 300, "height": 130, "color": "#6366f1"},
+		{"id": "dns", "type": "text", "text": "Private DNS zones", "x": 1020, "y": 130, "width": 300, "height": 130, "color": "#6366f1"},
+
+		{"id": "afnd", "type": "text", "text": "Foundry account\nproject per app\nevaluations, tracing", "x": 80, "y": 490, "width": 300, "height": 130, "color": "#0d9488"},
+		{"id": "hosted", "type": "text", "text": "Foundry hosted agents\n(optional)", "x": 420, "y": 490, "width": 300, "height": 130, "color": "#0d9488"},
+		{"id": "selfh", "type": "text", "text": "Self-hosted agents\nContainer Apps or AKS", "x": 80, "y": 710, "width": 300, "height": 130, "color": "#0d9488"},
+		{"id": "acr", "type": "text", "text": "Container Registry", "x": 420, "y": 710, "width": 300, "height": 130, "color": "#0d9488"},
+		{"id": "mi", "type": "text", "text": "Managed identity\nper project", "x": 760, "y": 710, "width": 240, "height": 130, "color": "#0d9488"},
+		{"id": "adata", "type": "text", "text": "Agent Service and app data\nAI Search, Storage, Cosmos DB", "x": 80, "y": 930, "width": 300, "height": 130, "color": "#0d9488"},
+		{"id": "kv", "type": "text", "text": "Key Vault", "x": 420, "y": 930, "width": 300, "height": 130, "color": "#0d9488"},
+		{"id": "amon", "type": "text", "text": "Log Analytics\nApplication Insights", "x": 760, "y": 930, "width": 240, "height": 130, "color": "#0d9488"},
+
+		{"id": "apim", "type": "text", "text": "API Management: AI gateway\nmodels, APIs, MCP servers, A2A agents", "x": 1200, "y": 450, "width": 720, "height": 120, "color": "#2563eb"},
+		{"id": "fnd", "type": "text", "text": "Foundry account and project\nmodel deployments\nControl Plane (preview)", "x": 1200, "y": 670, "width": 340, "height": 120, "color": "#2563eb"},
+		{"id": "mon", "type": "text", "text": "Log Analytics\nApplication Insights, alerts", "x": 1580, "y": 670, "width": 340, "height": 120, "color": "#2563eb"},
+		{"id": "reg", "type": "text", "text": "API Center\nregistry (optional)", "x": 1200, "y": 880, "width": 340, "height": 100, "color": "#2563eb"},
+		{"id": "safety", "type": "text", "text": "Content Safety\n(optional)", "x": 1580, "y": 880, "width": 340, "height": 100, "color": "#2563eb"},
+		{"id": "cache", "type": "text", "text": "Semantic cache\nManaged Redis (optional)", "x": 1200, "y": 1000, "width": 340, "height": 100, "color": "#2563eb"},
+		{"id": "pii", "type": "text", "text": "PII processing\n(optional)", "x": 1580, "y": 1000, "width": 340, "height": 100, "color": "#2563eb"},
+
+		{"id": "idl", "type": "text", "text": "Agent identity\nMicrosoft Agent 365", "x": 40, "y": 1350, "width": 600, "height": 110, "color": "#64748b"},
+		{"id": "sec", "type": "text", "text": "Foundational security\nDefender, Entra ID, Purview", "x": 700, "y": 1350, "width": 600, "height": 110, "color": "#64748b"},
+		{"id": "mgmt", "type": "text", "text": "Management\nAzure Policy, Azure Monitor", "x": 1360, "y": 1350, "width": 600, "height": 110, "color": "#64748b"}
 	],
 	"edges": [
-		{
-			"id": "e1",
-			"fromNode": "eng",
-			"fromSide": "bottom",
-			"toNode": "grp_app",
-			"toSide": "top",
-			"label": "build and deploy"
-		},
-		{
-			"id": "e2",
-			"fromNode": "selfh",
-			"fromSide": "left",
-			"toNode": "apim",
-			"toSide": "right",
-			"label": "Entra token"
-		},
-		{
-			"id": "e3",
-			"fromNode": "hosted",
-			"fromSide": "left",
-			"toNode": "apim",
-			"toSide": "right",
-			"label": "gateway"
-		},
-		{
-			"id": "e4",
-			"fromNode": "afnd",
-			"fromSide": "left",
-			"toNode": "apim",
-			"toSide": "right",
-			"label": "gateway connection"
-		},
-		{
-			"id": "e5",
-			"fromNode": "apim",
-			"fromSide": "bottom",
-			"toNode": "fnd",
-			"toSide": "top",
-			"label": "managed identity"
-		},
-		{
-			"id": "e6",
-			"fromNode": "apim",
-			"fromSide": "bottom",
-			"toNode": "reg",
-			"toSide": "top"
-		},
-		{
-			"id": "e7",
-			"fromNode": "apim",
-			"fromSide": "left",
-			"toNode": "safety",
-			"toSide": "left"
-		},
-		{
-			"id": "e8",
-			"fromNode": "apim",
-			"fromSide": "right",
-			"toNode": "cache",
-			"toSide": "right"
-		},
-		{
-			"id": "e9",
-			"fromNode": "apim",
-			"fromSide": "left",
-			"toNode": "pii",
-			"toSide": "left"
-		},
-		{
-			"id": "e15",
-			"fromNode": "apim",
-			"fromSide": "right",
-			"toNode": "mon",
-			"toSide": "right",
-			"label": "usage per project"
-		},
-		{
-			"id": "e16",
-			"fromNode": "vnet",
-			"fromSide": "bottom",
-			"toNode": "grp_app",
-			"toSide": "bottom",
-			"label": "private endpoints"
-		},
-		{
-			"id": "e10",
-			"fromNode": "vnet",
-			"fromSide": "right",
-			"toNode": "grp_hub",
-			"toSide": "left",
-			"label": "private endpoints"
-		},
-		{
-			"id": "e11",
-			"fromNode": "grp_tenant",
-			"fromSide": "top",
-			"toNode": "grp_sub",
-			"toSide": "bottom",
-			"label": "governs"
-		},
-		{
-			"id": "e12",
-			"fromNode": "mi",
-			"fromSide": "top",
-			"toNode": "selfh",
-			"toSide": "bottom"
-		},
-		{
-			"id": "e13",
-			"fromNode": "acr",
-			"fromSide": "left",
-			"toNode": "selfh",
-			"toSide": "right"
-		},
-		{
-			"id": "e14",
-			"fromNode": "selfh",
-			"fromSide": "bottom",
-			"toNode": "adata",
-			"toSide": "left"
-		}
+		{"id": "e1", "fromNode": "eng", "fromSide": "bottom", "toNode": "grp_sub", "toSide": "top"},
+		{"id": "e2", "fromNode": "grp_net", "fromSide": "bottom", "toNode": "grp_work", "toSide": "top", "label": "private endpoints"},
+		{"id": "e3", "fromNode": "grp_app", "fromSide": "right", "toNode": "grp_hub", "toSide": "left", "label": "Entra token, gateway connection"},
+		{"id": "e4", "fromNode": "apim", "fromSide": "bottom", "toNode": "g_hubcore", "toSide": "top"},
+		{"id": "e5", "fromNode": "apim", "fromSide": "left", "toNode": "g_gov", "toSide": "left"},
+		{"id": "e6", "fromNode": "grp_tenant", "fromSide": "top", "toNode": "grp_sub", "toSide": "bottom", "label": "governs"}
 	]
 }
