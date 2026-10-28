@@ -1,0 +1,120 @@
+<!-- Policy of the gateway API (Responses API and chat completions). Rendered by modules/hub with templatefile(). -->
+<policies>
+  <inbound>
+    <base />
+    <!-- Only Entra ID tokens from this tenant, for this gateway app, that carry the app role. -->
+    <validate-jwt header-name="Authorization" require-scheme="Bearer" require-signed-tokens="true" require-expiration-time="true"
+        failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" output-token-variable-name="jwt">
+      <openid-config url="https://login.microsoftonline.com/${tenant_id}/v2.0/.well-known/openid-configuration" />
+      <audiences>
+        <audience>${client_id}</audience>
+        <audience>api://${client_id}</audience>
+      </audiences>
+      <issuers>
+        <issuer>https://login.microsoftonline.com/${tenant_id}/v2.0</issuer>
+      </issuers>
+      <required-claims>
+        <claim name="roles" match="any">
+          <value>${role}</value>
+        </claim>
+      </required-claims>
+    </validate-jwt>
+    <!-- Who is calling: the client app id of the token, used as the key for the token limit and the metric. -->
+    <set-variable name="caller" value="@{
+        var jwt = (Jwt)context.Variables[&quot;jwt&quot;];
+        string[] v;
+        if (jwt.Claims.TryGetValue(&quot;azp&quot;, out v) &amp;&amp; v.Length > 0) { return v[0]; }
+        if (jwt.Claims.TryGetValue(&quot;appid&quot;, out v) &amp;&amp; v.Length > 0) { return v[0]; }
+        return jwt.Subject;
+    }" />
+    <!-- Responses belong to the caller that created them. Foundry sees every call as the gateway's identity, so the
+         gateway records the caller in the response metadata, and checks it before any call that reads, deletes,
+         cancels or continues a response. Unknown and foreign response ids get the same 404. -->
+    <choose>
+      <when condition="@(context.Operation.Id == &quot;responses-create&quot;)">
+        <set-variable name="responseToCheck" value="@{
+            try { return (string)context.Request.Body.As&lt;JObject&gt;(preserveContent: true)[&quot;previous_response_id&quot;] ?? &quot;&quot;; }
+            catch { return &quot;&quot;; }
+        }" />
+        <set-body>@{
+            var raw = context.Request.Body.As<string>(preserveContent: true);
+            try
+            {
+                var body = JObject.Parse(raw);
+                var metadata = body["metadata"] as JObject ?? new JObject();
+                metadata["gateway_caller"] = (string)context.Variables["caller"];
+                body["metadata"] = metadata;
+                return body.ToString(Newtonsoft.Json.Formatting.None);
+            }
+            catch { return raw; }
+        }</set-body>
+      </when>
+      <when condition="@(context.Request.MatchedParameters.ContainsKey(&quot;response_id&quot;))">
+        <set-variable name="responseToCheck" value="@(context.Request.MatchedParameters[&quot;response_id&quot;])" />
+      </when>
+    </choose>
+    <choose>
+      <when condition="@(!string.IsNullOrEmpty(context.Variables.GetValueOrDefault&lt;string&gt;(&quot;responseToCheck&quot;, &quot;&quot;)))">
+        <send-request mode="new" response-variable-name="storedResponse" timeout="30" ignore-error="true">
+          <set-url>@("${backend_url}/v1/responses/" + Uri.EscapeDataString((string)context.Variables["responseToCheck"]))</set-url>
+          <set-method>GET</set-method>
+          <authentication-managed-identity resource="https://cognitiveservices.azure.com" />
+        </send-request>
+        <choose>
+          <when condition="@{
+              var stored = context.Variables.GetValueOrDefault&lt;IResponse&gt;(&quot;storedResponse&quot;);
+              if (stored == null || stored.StatusCode != 200) { return true; }
+              try { return (string)stored.Body.As&lt;JObject&gt;()[&quot;metadata&quot;]?[&quot;gateway_caller&quot;] != (string)context.Variables[&quot;caller&quot;]; }
+              catch { return true; }
+          }">
+            <return-response>
+              <set-status code="404" reason="Not Found" />
+              <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+              </set-header>
+              <set-body>{"error": {"message": "No response found with that id.", "type": "invalid_request_error", "code": "response_not_found"}}</set-body>
+            </return-response>
+          </when>
+        </choose>
+      </when>
+    </choose>
+%{ if content_safety ~}
+    <!-- Content safety check on prompts -->
+    <choose>
+      <when condition="@(context.Operation.Id == &quot;responses-create&quot; || context.Operation.Id == &quot;chat-completions-create&quot;)">
+        <llm-content-safety backend-id="content-safety" shield-prompt="true">
+          <categories output-type="FourSeverityLevels">
+            <category name="Hate" threshold="4" />
+            <category name="SelfHarm" threshold="4" />
+            <category name="Sexual" threshold="4" />
+            <category name="Violence" threshold="4" />
+          </categories>
+        </llm-content-safety>
+      </when>
+    </choose>
+%{ endif ~}
+    <!-- Foundry auth with the gateway's managed identity (no keys) -->
+    <authentication-managed-identity resource="https://cognitiveservices.azure.com" />
+%{ if tokens_per_minute > 0 ~}
+    <!-- Token limit per caller -->
+    <llm-token-limit counter-key="@((string)context.Variables[&quot;caller&quot;])" tokens-per-minute="${tokens_per_minute}" estimate-prompt-tokens="false" remaining-tokens-header-name="x-remaining-tokens" retry-after-header-name="Retry-After" />
+%{ endif ~}
+    <!-- Token usage per caller, to Application Insights -->
+    <llm-emit-token-metric namespace="llm-gateway">
+      <dimension name="Caller" value="@((string)context.Variables[&quot;caller&quot;])" />
+      <dimension name="API ID" />
+    </llm-emit-token-metric>
+  </inbound>
+  <backend>
+    <!-- Retry throttling (429) and short outages (503); stream responses without buffering -->
+    <retry condition="@(context.Response.StatusCode == 429 || context.Response.StatusCode == 503)" count="2" interval="1" first-fast-retry="true">
+      <forward-request timeout="240" buffer-request-body="true" buffer-response="false" />
+    </retry>
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>
