@@ -21,7 +21,7 @@ var specs = [
 ]
 module endpoints 'private-endpoint.bicep' = [
   for (spec, i) in specs: {
-    name: 'endpoint-${i}'
+    name: 'endpoint-${name}-${i}'
     params: {
       name: 'pe-${spec.name}-${name}'
       location: location

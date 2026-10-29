@@ -6,6 +6,8 @@ param name string
 param location string
 @description('Ownership tags.')
 param tags Tags
+@description('Expose secure workspace log-shipping settings only for an ACA environment.')
+param includeLogConfiguration bool = false
 
 resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${name}-law'
@@ -32,3 +34,11 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 output resources Monitoring = { workspaceId: workspace.id, appInsightsId: insights.id }
+
+@secure()
+output instrumentationKey string = insights.properties.InstrumentationKey
+
+@secure()
+output logConfiguration object = includeLogConfiguration
+  ? { customerId: workspace.properties.customerId, sharedKey: workspace.listKeys().primarySharedKey }
+  : {}

@@ -1,17 +1,17 @@
 locals {
   agent_connections = var.enable_agent_infrastructure ? {
     blob = {
-      name     = "agent-files"
+      name     = "${var.use_case_name}-agent-files"
       category = "AzureStorageAccount"
       target   = azurerm_storage_account.this.primary_blob_endpoint
     }
     search = {
-      name     = "agent-search"
+      name     = "${var.use_case_name}-agent-search"
       category = "CognitiveSearch"
       target   = azurerm_search_service.this.endpoint
     }
     cosmos = {
-      name     = "agent-threads"
+      name     = "${var.use_case_name}-agent-threads"
       category = "CosmosDb"
       target   = azurerm_cosmosdb_account.this.endpoint
     }
@@ -42,7 +42,7 @@ resource "azapi_resource" "gateway_connection" {
   # Microsoft's APIM connection sample uses this contract; embedded schemas omit ProjectManagedIdentity.
   schema_validation_enabled = false
   type                      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview"
-  name                      = each.key
+  name                      = "${var.use_case_name}-${each.key}"
   parent_id                 = var.foundry.project_id
   locks                     = [var.foundry.id]
   body = {

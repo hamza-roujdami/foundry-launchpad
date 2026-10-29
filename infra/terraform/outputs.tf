@@ -43,9 +43,9 @@ output "readiness" {
     gateway_url      = "${module.ai_hub_services.gateway_url}/v1"
     gateway_audience = "api://${azuread_application.gateway.client_id}"
     gateway_id       = module.ai_hub_services.apim_id
-    connection_name  = "ai-gateway"
+    connection_name  = "${name}-ai-gateway"
     model            = "fast-chat"
-    agent_model      = "ai-gateway/fast-chat"
+    agent_model      = "${name}-ai-gateway/fast-chat"
     agents_enabled   = var.enable_agent_infrastructure
     registry_url     = "https://${azurerm_container_registry.ai_spokes.login_server}"
   }]

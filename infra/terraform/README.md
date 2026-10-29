@@ -114,13 +114,16 @@ Existing platform firewalls and routing remain platform-owned.
 Coordinate AMPLS/DNS with the platform owner. Reusing an existing ACR, monitoring
 workspace or AMPLS is not implemented.
 
-With agent infrastructure enabled, every project gets an `ai-gateway`
+With agent infrastructure enabled, every project gets a `<project>-ai-gateway`
 `ApiManagement` connection to the hub's `/foundry/v1` endpoint. It uses
 `ProjectManagedIdentity`, the custom gateway audience, and a serialized static
-approved chat-model list. Agents select `ai-gateway/fast-chat` or
-`ai-gateway/advanced-chat`; embeddings are called by application/indexing code
+approved chat-model list. Agents select `<project>-ai-gateway/fast-chat` or
+`<project>-ai-gateway/advanced-chat`; embeddings are called by application/indexing code
 through APIM, not offered as an agent chat model. Alias names are the actual hub
 deployment names; APIM rejects other aliases and mismatched operations.
+Connection names are project-qualified to avoid shared-account collisions.
+Existing capability-host connection bindings cannot be updated in place;
+review a replacement and its data/runtime impact before renaming connections.
 The preview connection uses the official sample contract with AzAPI schema
 validation disabled only for that resource because the embedded schema omits
 this authentication type. No model key or second APIM is created.

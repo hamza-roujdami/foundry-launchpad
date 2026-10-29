@@ -226,6 +226,9 @@ class Contracts(unittest.TestCase):
         self.assertEqual(resource_map(projects)["projects"]["copy"]["mode"], "serial")
         hub = nested(self.template, "hub")
         self.assertIn("policy", resource_map(hub)["operations"]["dependsOn"])
+        self.assertIn("monitoring", resource_map(hub)["logger"]["properties"]["credentials"]["instrumentationKey"])
+        self.assertIn("instrumentationKey", resource_map(hub)["logger"]["properties"]["credentials"]["instrumentationKey"])
+        self.assertEqual(nested(hub, "monitoring")["outputs"]["instrumentationKey"]["type"], "securestring")
 
     def test_private_keyless_security_contracts(self):
         for resource in declarations(self.template):
@@ -264,7 +267,26 @@ class Contracts(unittest.TestCase):
         self.assertEqual(apim["sku"], {"name": "StandardV2", "capacity": 1})
         self.assertEqual(apim["properties"]["virtualNetworkType"], "External")
         key_targets = re.findall(r"listKeys\('([^']+)'", json.dumps(self.template))
-        self.assertEqual(key_targets, ["workspace"], "Only ACA's Azure Monitor log-shipping integration may read a workspace key")
+        self.assertTrue(key_targets and set(key_targets) == {"workspace"}, "Only Azure Monitor workspace keys may be used for log shipping")
+        application = nested(self.template, "applications")
+        app_monitoring = resource_map(application)["monitoring"]
+        self.assertIs(app_monitoring["properties"]["parameters"]["includeLogConfiguration"]["value"], True)
+        settings = nested(application, "monitoring")["outputs"]["logConfiguration"]
+        self.assertEqual(settings["type"], "secureObject")
+        self.assertIn("parameters('includeLogConfiguration')", settings["value"])
+        self.assertIn("monitoring", resource_map(application)["environment"]["properties"]["appLogsConfiguration"]["logAnalyticsConfiguration"])
+
+    def test_model_only_account_has_no_empty_network_injection(self):
+        foundry = nested(nested(self.template, "hub"), "foundry")
+        injection = resource_map(foundry)["account"]["properties"]["networkInjections"]
+        self.assertIn("if(empty(parameters('agentSubnetId')), null(),", injection)
+        self.assertIn("'useMicrosoftManagedNetwork', false()", injection)
+        self.assertIn("'subnetArmId', parameters('agentSubnetId')", injection)
+
+    def test_backing_endpoint_deployment_names_are_use_case_scoped(self):
+        endpoints = resource_map(nested(self.template, "backingEndpoints"))["endpoints"]
+        self.assertIn("parameters('name')", endpoints["name"])
+        self.assertIn("copyIndex", endpoints["name"])
 
     def test_gateway_policy_parity(self):
         terraform = BASE.parent / "terraform/modules/ai-hub-services/gateway-policy.xml.tftpl"
@@ -283,6 +305,12 @@ class Contracts(unittest.TestCase):
     def test_gateway_model_connection(self):
         bindings = nested(self.template, "projectBindings")
         connection = resource_map(bindings)["gateway"]
+        self.assertIn("parameters('projectName')", connection["name"])
+        self.assertIn("parameters('projectName')", resource_map(bindings)["tracing"]["name"])
+        for spec in bindings["variables"]["connectionSpecs"]:
+            self.assertIn("parameters('projectName')", spec["name"])
+        for key in ["storageConnections", "threadStorageConnections", "vectorStoreConnections"]:
+            self.assertIn("parameters('projectName')", resource_map(bindings)["capabilityHost"]["properties"][key][0])
         self.assertEqual(connection["condition"], "[parameters('enableAgents')]")
         properties = connection["properties"]
         self.assertEqual(properties["authType"], "ProjectManagedIdentity")
@@ -321,9 +349,11 @@ class Contracts(unittest.TestCase):
             "gateway_url", "gateway_audience", "gateway_id", "connection_name",
             "model", "agent_model", "agents_enabled", "registry_url",
         })
-        self.assertEqual(entry["connection_name"], "ai-gateway")
+        self.assertIn("-ai-gateway", entry["connection_name"])
+        self.assertIn("useCases", entry["connection_name"])
         self.assertEqual(len(entry["private_urls"]), 4)
-        self.assertEqual(entry["agent_model"], "ai-gateway/fast-chat")
+        self.assertIn("-ai-gateway/fast-chat", entry["agent_model"])
+        self.assertIn("useCases", entry["agent_model"])
         self.assertIn("gatewayUrl", entry["gateway_url"])
 
     def test_example_environment_parameters(self):

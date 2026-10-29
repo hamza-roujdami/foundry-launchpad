@@ -19,9 +19,8 @@ param enableAgents bool
 
 module monitoring 'monitoring.bicep' = {
   name: 'monitoring'
-  params: { name: '${name}-${suffix}', location: location, tags: tags }
+  params: { name: '${name}-${suffix}', location: location, tags: tags, includeLogConfiguration: true }
 }
-resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = { name: '${name}-${suffix}-law' }
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${name}'
   location: location
@@ -36,14 +35,10 @@ resource environment 'Microsoft.App/managedEnvironments@2025-07-01' = {
     vnetConfiguration: { infrastructureSubnetId: acaSubnetId, internal: true }
     appLogsConfiguration: {
       destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: workspace.properties.customerId
-        sharedKey: workspace.listKeys().primarySharedKey
-      }
+      logAnalyticsConfiguration: monitoring.outputs.logConfiguration
     }
     workloadProfiles: [{ name: 'Consumption', workloadProfileType: 'Consumption' }]
   }
-  dependsOn: [monitoring]
 }
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'stlp${suffix}'

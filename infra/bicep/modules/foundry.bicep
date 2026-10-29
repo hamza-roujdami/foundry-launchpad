@@ -25,7 +25,7 @@ resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
     publicNetworkAccess: 'Disabled'
     networkAcls: { defaultAction: 'Deny' }
     networkInjections: empty(agentSubnetId)
-      ? []
+      ? null
       : [
           {
             scenario: 'agent'

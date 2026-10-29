@@ -25,9 +25,9 @@ def fixture():
         "gateway_url": "https://gateway.azure-api.net/foundry/v1",
         "gateway_audience": "api://00000000-0000-0000-0000-000000000001",
         "gateway_id": "/subscriptions/test/resourceGroups/hub/providers/Microsoft.ApiManagement/service/gateway",
-        "connection_name": "ai-gateway",
+        "connection_name": "ai-app-01-ai-gateway",
         "model": "fast-chat",
-        "agent_model": "ai-gateway/fast-chat",
+        "agent_model": "ai-app-01-ai-gateway/fast-chat",
         "agents_enabled": True,
         "registry_url": "https://registry.azurecr.io",
         "private_urls": [
@@ -53,7 +53,7 @@ class SmokeTests(unittest.TestCase):
         return smoke.load_configuration(self.path, "ai-app-01")
 
     def test_selects_gateway_model_only(self):
-        self.assertEqual(self.config().agent_model, "ai-gateway/fast-chat")
+        self.assertEqual(self.config().agent_model, "ai-app-01-ai-gateway/fast-chat")
         for field, value in [("agent_model", "test-model"), ("gateway_url", "https://direct.openai.azure.com/openai/v1"), ("agents_enabled", False)]:
             with self.subTest(field=field):
                 entry = fixture()
@@ -145,7 +145,7 @@ class SmokeTests(unittest.TestCase):
                         smoke.exercise_agent(project, definition, self.config(), "test-run")
                 else:
                     smoke.exercise_agent(project, definition, self.config(), "test-run")
-            self.assertEqual(definition.call_args.kwargs["model"], "ai-gateway/fast-chat")
+            self.assertEqual(definition.call_args.kwargs["model"], "ai-app-01-ai-gateway/fast-chat")
             client.conversations.delete.assert_called_once_with("conversation")
             project.agents.delete.assert_called_once_with(agent_name="temporary-agent")
             self.assertEqual(client.responses.create.call_args.kwargs["max_output_tokens"], 256)
@@ -191,7 +191,7 @@ class SmokeTests(unittest.TestCase):
         args = ["--config", str(self.path), "--use-case", "ai-app-01", "--allow-paid-inference"]
         with patch.object(smoke, "preflight"), patch.object(smoke, "run_agent") as agent, patch.object(smoke, "run_gateway") as gateway:
             self.assertEqual(smoke.main([*args, "--agent-model", "advanced-chat"]), 0)
-            self.assertEqual(agent.call_args.args[0].agent_model, "ai-gateway/advanced-chat")
+            self.assertEqual(agent.call_args.args[0].agent_model, "ai-app-01-ai-gateway/advanced-chat")
             gateway.assert_not_called()
             client_id = "00000000-0000-0000-0000-000000000001"
             self.assertEqual(smoke.main([*args, "--gateway-runtime-client-id", client_id]), 0)

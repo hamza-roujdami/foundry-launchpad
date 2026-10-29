@@ -71,12 +71,15 @@ group and two gateway metric alerts.
 - Agent infrastructure adds creation-time network injection, AAD BYO
   Storage/Search/Cosmos connections and serial project capability hosts.
   Foundry account/project writes are serialized where required.
-- Each enabled project gets an `ai-gateway` model connection using
+- Each enabled project gets a `<project>-ai-gateway` model connection using
   `ProjectManagedIdentity`, audience `api://<gateway-client-id>` and the static
   approved chat-model list. It targets the central APIM `/foundry/v1` route across
-  subscriptions. Agents select `ai-gateway/fast-chat` or
-  `ai-gateway/advanced-chat`; no key is read. Application embeddings use APIM's
+  subscriptions. Agents select `<project>-ai-gateway/fast-chat` or
+  `<project>-ai-gateway/advanced-chat`; no key is read. Application embeddings use APIM's
   `/foundry/v1/embeddings` operation and the `embeddings` alias.
+  All connection names are project-qualified to avoid shared-account collisions.
+  Capability-host connection bindings are immutable: changing existing names
+  requires a reviewed host replacement, not an ordinary in-place update.
 - APIM enforces the same three-alias model/operation allowlist for both projects,
   retaining caller-scoped response ownership. Chat token limits and prompt safety
   are separate from the embedding request limit (default 60/minute per caller)
@@ -209,7 +212,8 @@ seed for bootstrap and the actual record name for assign/verify.
 Request application tokens for `api://<gatewayClientId>/.default`. Application
 and agent code must use the `gatewayUrl` output, not the model account endpoint.
 Configuring/testing the Foundry-to-APIM model connection remains a separate
-operator/application task, as in Terraform; no direct model connection is added.
+live acceptance task; the IaC already creates the keyless project-to-APIM
+connection, as in Terraform. No direct model connection is added.
 
 ## Offline validation
 

@@ -131,7 +131,7 @@ run "private_use_case" {
     error_message = "Connections and capability host must attach to the existing foundation project, never a new use case account."
   }
   assert {
-    condition     = azapi_resource.capability_host["agents"].body.properties.storageConnections == ["agent-files"] && azapi_resource.capability_host["agents"].body.properties.threadStorageConnections == ["agent-threads"] && azapi_resource.capability_host["agents"].body.properties.vectorStoreConnections == ["agent-search"] && !azapi_resource.capability_host["agents"].schema_validation_enabled
+    condition     = azapi_resource.capability_host["agents"].body.properties.storageConnections == ["${var.use_case_name}-agent-files"] && azapi_resource.capability_host["agents"].body.properties.threadStorageConnections == ["${var.use_case_name}-agent-threads"] && azapi_resource.capability_host["agents"].body.properties.vectorStoreConnections == ["${var.use_case_name}-agent-search"] && !azapi_resource.capability_host["agents"].schema_validation_enabled
     error_message = "The capability host must explicitly select all three BYO connections using the documented pinned-schema workaround."
   }
   assert {
@@ -149,6 +149,8 @@ run "private_use_case" {
   assert {
     condition = (
       azapi_resource.gateway_connection["ai-gateway"].parent_id == var.foundry.project_id &&
+      azapi_resource.gateway_connection["ai-gateway"].name == "${var.use_case_name}-ai-gateway" &&
+      azapi_resource.tracing_connection.name == "${var.use_case_name}-appinsights" &&
       azapi_resource.gateway_connection["ai-gateway"].body.properties.category == "ApiManagement" &&
       azapi_resource.gateway_connection["ai-gateway"].body.properties.authType == "ProjectManagedIdentity" &&
       azapi_resource.gateway_connection["ai-gateway"].body.properties.target == var.gateway.url &&

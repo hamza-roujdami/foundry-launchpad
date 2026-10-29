@@ -86,7 +86,7 @@ python3 -m venv .venv
 ```
 
 This creates one uniquely named prompt agent using
-`ai-gateway/fast-chat`, makes one synthetic request with an output
+`<project>-ai-gateway/fast-chat`, makes one synthetic request with an output
 token limit, and requires the exact `LAUNCHPAD_OK` reply. It deletes the
 conversation and temporary agent on success or inference failure. Cleanup
 failure is an error; if creation times out or the process is interrupted, inspect

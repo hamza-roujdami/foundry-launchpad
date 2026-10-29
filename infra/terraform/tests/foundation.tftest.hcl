@@ -128,7 +128,7 @@ run "two_subscription_foundation" {
       for entry in output.readiness : (
         toset(keys(entry)) == toset(["name", "project_id", "project_endpoint", "private_urls", "gateway_url", "gateway_audience", "gateway_id", "connection_name", "model", "agent_model", "agents_enabled", "registry_url"]) &&
         entry.gateway_url == "https://test.azure-api.net/foundry/v1" &&
-        entry.agent_model == "ai-gateway/fast-chat" &&
+        entry.agent_model == "${entry.name}-ai-gateway/fast-chat" &&
         length(entry.private_urls) == 4
       )
     ])

@@ -75,7 +75,7 @@ resource pull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 resource tracing 'Microsoft.CognitiveServices/accounts/projects/connections@2025-06-01' = {
   parent: project
-  name: 'appinsights'
+  name: '${projectName}-appinsights'
   properties: {
     category: 'AppInsights'
     target: monitoring.appInsightsId
@@ -87,7 +87,7 @@ resource tracing 'Microsoft.CognitiveServices/accounts/projects/connections@2025
 }
 resource gateway 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = if (enableAgents) {
   parent: project
-  name: 'ai-gateway'
+  name: '${projectName}-ai-gateway'
   properties: {
     category: 'ApiManagement'
     target: gatewayUrl
@@ -109,9 +109,9 @@ resource gateway 'Microsoft.CognitiveServices/accounts/projects/connections@2025
   dependsOn: [tracing]
 }
 var connectionSpecs = [
-  { name: 'agent-files', category: 'AzureStorageAccount', target: backing.storageEndpoint, id: backing.storageId }
-  { name: 'agent-search', category: 'CognitiveSearch', target: backing.searchEndpoint, id: backing.searchId }
-  { name: 'agent-threads', category: 'CosmosDb', target: backing.cosmosEndpoint, id: backing.cosmosId }
+  { name: '${projectName}-agent-files', category: 'AzureStorageAccount', target: backing.storageEndpoint, id: backing.storageId }
+  { name: '${projectName}-agent-search', category: 'CognitiveSearch', target: backing.searchEndpoint, id: backing.searchId }
+  { name: '${projectName}-agent-threads', category: 'CosmosDb', target: backing.cosmosEndpoint, id: backing.cosmosId }
 ]
 @batchSize(1)
 resource connections 'Microsoft.CognitiveServices/accounts/projects/connections@2025-06-01' = [
@@ -134,9 +134,9 @@ resource capabilityHost 'Microsoft.CognitiveServices/accounts/projects/capabilit
     // The Standard Agent Service REST contract requires this field; the bundled preview schema omits it.
     #disable-next-line BCP037
     capabilityHostKind: 'Agents'
-    storageConnections: ['agent-files']
-    threadStorageConnections: ['agent-threads']
-    vectorStoreConnections: ['agent-search']
+    storageConnections: ['${projectName}-agent-files']
+    threadStorageConnections: ['${projectName}-agent-threads']
+    vectorStoreConnections: ['${projectName}-agent-search']
   }
   dependsOn: [connections]
 }

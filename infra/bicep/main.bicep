@@ -365,9 +365,9 @@ output readiness array = [for (app, i) in useCases: {
   gateway_url: hub.outputs.gatewayUrl
   gateway_audience: 'api://${gatewayClientId}'
   gateway_id: hub.outputs.apimId
-  connection_name: 'ai-gateway'
+  connection_name: '${app.name}-ai-gateway'
   model: 'fast-chat'
-  agent_model: 'ai-gateway/fast-chat'
+  agent_model: '${app.name}-ai-gateway/fast-chat'
   agents_enabled: enableAgentInfrastructure
   registry_url: 'https://${spokes.outputs.registryLoginServer}'
 }]

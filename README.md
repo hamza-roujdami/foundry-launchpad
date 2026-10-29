@@ -47,7 +47,7 @@ The ai-app-01 and ai-app-02 applications themselves are not deployed.
 | **ai-hub / APIM** | Authentication and model access | Entra token and `Gateway.Invoke` role validation; three-alias model/operation allowlist; managed identity to the model backend, not model keys |
 | **ai-hub / APIM** | Usage and safety policies | Chat token limits, prompt safety/Prompt Shield, caller-owned Responses, retries on 429/503; separate embedding request limits |
 | **ai-hub** | Gateway operations and monitoring | Caller/model usage metrics, embedding token metrics, gateway logs, and email alerts for 5xx errors and 429 throttling |
-| **ai-spoke** | Project connections | Each enabled project connects to ai-hub APIM through `ai-gateway`, and to its own Storage, Search and Cosmos DB with permissions and capability hosts |
+| **ai-spoke** | Project connections | Each enabled project connects to ai-hub APIM through `<project>-ai-gateway`, and to its own Storage, Search and Cosmos DB with permissions and capability hosts |
 | **ai-spoke** | Workload identity and monitoring | Separate project/runtime identities, scoped permissions and dedicated telemetry per use case |
 | **Both** | Private networking | Private endpoints, routing and DNS in the default profile; public workload access disabled after APIM bootstrap. Developer/runner access remains platform-provided |
 | **Both** | Cost notifications | Five resource-group monthly budgets with 80% and 100% notifications; budgets are not spending caps |
@@ -106,7 +106,10 @@ deployment. `fast-chat` is a workload label, not a latency guarantee; explicit
 caller reasoning settings are preserved. Validate Sol tool calling over the
 Foundry gateway chat-completions path before tool-using agents rely on it.
 
-Agent definitions select `ai-gateway/fast-chat` or `ai-gateway/advanced-chat`.
+Agent definitions select `<project>-ai-gateway/fast-chat` or
+`<project>-ai-gateway/advanced-chat`, for example `ai-app-01-ai-gateway/fast-chat`.
+All connection names include the project name to avoid collisions in the shared
+Foundry account; the exported readiness settings supply the exact names.
 Application code sends the bare alias as `model` to APIM. Alias names are also
 the ai-hub deployment names, so no additional routing service or name translation
 is needed. No model deployments are made inside the ai-spoke account.
@@ -205,8 +208,8 @@ dedicated to each use case. Private endpoints stay in the infrastructure groups.
 
 Solid links show configured relationships in the default profile. Dashed links
 show optional platform integration or future application model calls. Each
-Foundry project has an `ai-gateway` connection; an agent must select
-`ai-gateway/<model-deployment-name>`. Apps and agents must use APIM, never the model account
+Foundry project has a `<project>-ai-gateway` connection; an agent must select
+`<project>-ai-gateway/<model-deployment-name>`. Apps and agents must use APIM, never the model account
 directly. ACR and shared runtime monitoring belong to the ai-spoke foundation;
 each use case also has its own telemetry. Existing-network mode uses
 customer-managed routing and DNS.

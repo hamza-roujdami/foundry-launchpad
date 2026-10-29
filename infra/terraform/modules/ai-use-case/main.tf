@@ -105,7 +105,7 @@ resource "azurerm_role_assignment" "engineer" {
 
 resource "azapi_resource" "tracing_connection" {
   type      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-06-01"
-  name      = "appinsights"
+  name      = "${var.use_case_name}-appinsights"
   parent_id = var.foundry.project_id
   locks     = [var.foundry.id]
   body = {

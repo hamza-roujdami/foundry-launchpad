@@ -33,7 +33,6 @@ module foundry 'foundry.bicep' = {
   name: 'foundry'
   params: { name: 'foundry-hub-${suffix}', location: location, tags: tags, models: models }
 }
-resource insights 'Microsoft.Insights/components@2020-02-02' existing = { name: 'hub-${suffix}-appi' }
 resource modelAccount 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {
   name: 'foundry-hub-${suffix}'
 }
@@ -118,7 +117,7 @@ resource logger 'Microsoft.ApiManagement/service/loggers@2024-05-01' = {
   properties: {
     loggerType: 'applicationInsights'
     resourceId: monitoring.outputs.resources.appInsightsId
-    credentials: { instrumentationKey: insights.properties.InstrumentationKey }
+    credentials: { instrumentationKey: monitoring.outputs.instrumentationKey }
     isBuffered: true
   }
 }

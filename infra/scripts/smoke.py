@@ -70,7 +70,7 @@ def load_configuration(path: Path, use_case: str) -> Configuration:
         raise ValueError("Invalid Foundry project ARM resource ID.")
     if not re.fullmatch(r"/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.ApiManagement/service/[^/]+", config.gateway_id):
         raise ValueError("Invalid APIM ARM resource ID.")
-    if config.connection_name != "ai-gateway" or config.model not in CHAT_ALIASES or config.agent_model != f"{config.connection_name}/{config.model}":
+    if config.connection_name != f"{config.name}-ai-gateway" or config.model not in CHAT_ALIASES or config.agent_model != f"{config.connection_name}/{config.model}":
         raise ValueError("The smoke agent must select the ai-gateway connection, never a direct model deployment.")
     if not re.fullmatch(r"api://[0-9a-fA-F-]{36}", config.gateway_audience):
         raise ValueError("Expected the gateway's Entra application audience.")
