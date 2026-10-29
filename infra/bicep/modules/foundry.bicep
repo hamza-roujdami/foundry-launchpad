@@ -1,4 +1,4 @@
-import { Tags, Model } from '../types.bicep'
+import { Tags, Models } from '../types.bicep'
 
 @description('Foundry account name.')
 param name string
@@ -9,7 +9,7 @@ param tags Tags
 @description('Agent subnet resource ID, empty for model-only hub.')
 param agentSubnetId string = ''
 @description('Optional approved model deployment.')
-param model Model?
+param models Models?
 
 resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
   name: name
@@ -36,14 +36,17 @@ resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
   }
 }
 
-resource deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = if (model != null) {
-  parent: account
-  name: model!.name
-  sku: { name: model!.skuName, capacity: model!.capacity }
-  properties: {
-    model: { format: 'OpenAI', name: model!.name, version: model!.version }
+@batchSize(1)
+resource deployments 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = [
+  for entry in items(models ?? {}): {
+    parent: account
+    name: entry.key
+    sku: { name: entry.value.skuName, capacity: entry.value.capacity }
+    properties: {
+      model: { format: 'OpenAI', name: entry.value.name, version: entry.value.version }
+    }
   }
-}
+]
 
 output id string = account.id
 output name string = account.name

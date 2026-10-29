@@ -57,6 +57,18 @@ variable "foundry" {
   })
 }
 
+variable "gateway" {
+  description = "Central APIM OpenAI v1 URL, Entra audience and approved model; no model keys."
+  type = object({
+    url      = string
+    audience = string
+    models = map(object({
+      name    = string
+      version = string
+    }))
+  })
+}
+
 variable "private_endpoint_resource_group_name" {
   description = "AI spokes network resource group owning private endpoints and environment DNS."
   type        = string

@@ -1,4 +1,4 @@
-import { Tags, Model, Monitoring } from '../types.bicep'
+import { Tags, Models, Monitoring } from '../types.bicep'
 
 @description('Stable deployment suffix.')
 param suffix string
@@ -15,10 +15,13 @@ param gatewayClientId string
 @description('Dedicated delegated APIM integration subnet.')
 param apimSubnetId string
 @description('Approved model deployment, not a reservation.')
-param model Model
+param models Models
 @description('Per-verified-caller token allowance.')
 @minValue(1)
 param tokensPerMinute int
+@description('Embedding requests per verified caller per minute.')
+@minValue(1)
+param embeddingRequestsPerMinute int
 @description('True only for first creation; set false for subsequent deployments to avoid reopening public access.')
 param bootstrapPublicAccess bool
 
@@ -28,7 +31,7 @@ module monitoring 'monitoring.bicep' = {
 }
 module foundry 'foundry.bicep' = {
   name: 'foundry'
-  params: { name: 'foundry-hub-${suffix}', location: location, tags: tags, model: model }
+  params: { name: 'foundry-hub-${suffix}', location: location, tags: tags, models: models }
 }
 resource insights 'Microsoft.Insights/components@2020-02-02' existing = { name: 'hub-${suffix}-appi' }
 resource modelAccount 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = {
@@ -148,6 +151,7 @@ resource api 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
   }
 }
 var operationSpecs = [
+  { id: 'embeddings-create', name: 'Create embeddings', method: 'POST', path: '/v1/embeddings', responseId: false }
   { id: 'responses-create', name: 'Create a response', method: 'POST', path: '/v1/responses', responseId: false }
   { id: 'responses-get', name: 'Get a response', method: 'GET', path: '/v1/responses/{response_id}', responseId: true }
   {
@@ -195,10 +199,11 @@ resource operations 'Microsoft.ApiManagement/service/apis/operations@2024-05-01'
 var policyTenant = replace(loadTextContent('../policies/gateway.xml'), '__TENANT_ID__', tenantId)
 var policyClient = replace(policyTenant, '__CLIENT_ID__', gatewayClientId)
 var policyBackend = replace(policyClient, '__BACKEND_URL__', backendUrl)
+var policyTokens = replace(policyBackend, '__TOKENS_PER_MINUTE__', string(tokensPerMinute))
 resource policy 'Microsoft.ApiManagement/service/apis/policies@2024-05-01' = {
   parent: api
   name: 'policy'
-  properties: { format: 'rawxml', value: replace(policyBackend, '__TOKENS_PER_MINUTE__', string(tokensPerMinute)) }
+  properties: { format: 'rawxml', value: replace(policyTokens, '__EMBEDDING_REQUESTS_PER_MINUTE__', string(embeddingRequestsPerMinute)) }
   dependsOn: [backend, metrics, modelRole, safetyRole]
 }
 

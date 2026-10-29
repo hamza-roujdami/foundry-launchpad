@@ -29,6 +29,7 @@ output "backing_services" {
     storage_url    = azurerm_storage_account.this.primary_blob_endpoint
     search_url     = azurerm_search_service.this.endpoint
     cosmos_url     = azurerm_cosmosdb_account.this.endpoint
+    vault_url      = azurerm_key_vault.this.vault_uri
     blob_container = azurerm_storage_container.application.name
     database       = azurerm_cosmosdb_sql_database.application.name
   }
@@ -59,6 +60,10 @@ output "capability_host_id" {
 }
 
 output "connections" {
-  description = "Project connection IDs keyed by appinsights and, when enabled, blob, search and cosmos."
-  value       = merge({ appinsights = azapi_resource.tracing_connection.id }, { for key, connection in azapi_resource.agent_connection : key => connection.id })
+  description = "Project connection IDs for tracing and, when enabled, backing services and the central model gateway."
+  value = merge(
+    { appinsights = azapi_resource.tracing_connection.id },
+    { for key, connection in azapi_resource.agent_connection : key => connection.id },
+    { for key, connection in azapi_resource.gateway_connection : key => connection.id }
+  )
 }

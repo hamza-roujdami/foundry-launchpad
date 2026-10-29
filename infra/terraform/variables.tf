@@ -72,23 +72,36 @@ variable "publisher_email" {
   }
 }
 
-variable "model" {
-  description = "Hub model/version/SKU/capacity. Standard capacity uses model-specific allocation units; Provisioned capacity uses PTUs. No reservation is purchased."
-  type = object({
+variable "models" {
+  description = "Three shared hub deployments keyed by fast-chat, advanced-chat and embeddings. Values pin actual model/version/SKU/capacity; capacity is allocation units, not a reservation."
+  type = map(object({
     name     = string
     version  = string
     sku_name = string
     capacity = number
-  })
+  }))
   default = {
-    name     = "gpt-6-sol"
-    version  = "2026-09-22"
-    sku_name = "DataZoneStandard"
-    capacity = 15
+    fast-chat     = { name = "gpt-6.1-sol", version = "2026-09-29", sku_name = "DataZoneStandard", capacity = 10 }
+    advanced-chat = { name = "gpt-6.1-terra", version = "2026-10-26", sku_name = "DataZoneStandard", capacity = 10 }
+    embeddings    = { name = "text-embedding-3-large", version = "1", sku_name = "DataZoneStandard", capacity = 10 }
   }
   validation {
-    condition     = var.model.capacity > 0 && floor(var.model.capacity) == var.model.capacity
+    condition     = toset(keys(var.models)) == toset(["fast-chat", "advanced-chat", "embeddings"])
+    error_message = "Supply exactly the three governed deployment aliases: fast-chat, advanced-chat and embeddings."
+  }
+  validation {
+    condition     = alltrue([for model in values(var.models) : model.capacity > 0 && floor(model.capacity) == model.capacity])
     error_message = "Model capacity must be a positive integer matching regional model minimums."
+  }
+}
+
+variable "embedding_requests_per_minute" {
+  description = "Embedding requests per verified caller per minute; separate from chat token limits."
+  type        = number
+  default     = 60
+  validation {
+    condition     = var.embedding_requests_per_minute > 0 && floor(var.embedding_requests_per_minute) == var.embedding_requests_per_minute
+    error_message = "Use a positive whole embedding request allowance."
   }
 }
 

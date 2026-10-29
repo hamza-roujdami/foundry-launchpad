@@ -1,0 +1,260 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2080" height="1440" viewBox="0 0 2080 1440" role="img" aria-labelledby="title description">
+  <title id="title">Foundry Launchpad - private AI foundation</title>
+  <desc id="description">Target infrastructure in Central US: two existing subscriptions and five resource groups. The spokes subscription contains shared Foundry with two projects, shared ACR, networking, and two dedicated app infrastructure groups. The hub subscription contains the private APIM AI gateway, model account, Content Safety, networking, private DNS and AMPLS. Future application and agent model calls go through APIM only. Existing enterprise connectivity is outside deployment scope.</desc>
+  <defs>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #172b45; }
+      .title { font-size: 37px; font-weight: 700; }
+      .subtitle { font-size: 19px; fill: #51667e; }
+      .subscription { font-size: 23px; font-weight: 700; fill: #fff; }
+      .owner { font-size: 16px; fill: #e2efff; }
+      .rg { font-size: 21px; font-weight: 700; }
+      .heading { font-size: 21px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; fill: #51667e; }
+      .tiny { font-size: 15px; fill: #51667e; }
+      .tag { font-size: 14px; font-weight: 700; letter-spacing: 1px; fill: #1264a3; }
+      .card { fill: #fff; stroke: #c6d6e7; stroke-width: 1.5; }
+      .boundary { fill: #f0f7ff; stroke: #8ebdf0; stroke-width: 2; }
+      .group { fill: #fff; stroke: #afc5dd; stroke-width: 1.5; }
+      .future { fill: none; stroke: #263c55; stroke-width: 3; stroke-dasharray: 9 7; marker-end: url(#arrow); }
+      .flow { fill: none; stroke: #263c55; stroke-width: 3; marker-end: url(#arrow); }
+      .network { fill: none; stroke: #2585cd; stroke-width: 2.5; }
+      .number { fill: #fff; font-size: 17px; font-weight: 700; text-anchor: middle; }
+    </style>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L9 4.5L0 9Z" fill="#263c55"/></marker>
+    <marker id="blue-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#2585cd"/></marker>
+    <symbol id="foundry" viewBox="0 0 48 48">
+      <path d="M7 39L20 6h13L20 39Z" fill="#0078d4"/><path d="M24 6h9l10 33H30Z" fill="#50b9eb"/><path d="M19 26h17l4 13H14Z" fill="#7355c5"/>
+    </symbol>
+    <symbol id="aca" viewBox="0 0 48 48">
+      <path d="M24 3L43 14v21L24 46 5 35V14Z" fill="#8b67cd"/><path d="M24 3v43L5 35V14Z" fill="#a68bdb"/>
+      <path d="M13 17l11-6 12 6v14l-12 7-11-7Z" fill="#fff"/><path d="M17 20h15v11H17Z" fill="#0078d4"/><path d="M21 20v11m6-11v11" stroke="#81d7f7"/>
+    </symbol>
+    <symbol id="registry" viewBox="0 0 48 48">
+      <path d="M6 13L24 4l18 9v26L24 47 6 39Z" fill="#168ccd"/><path d="M6 13l18 9 18-9M24 22v25" fill="none" stroke="#a9eaff" stroke-width="2"/>
+      <path d="M11 20l8 4v7l-8-4Zm18 4l8-4v7l-8 4Z" fill="#fff"/>
+    </symbol>
+    <symbol id="gateway" viewBox="0 0 48 48">
+      <path d="M8 11h32v27H8Z" fill="#0078d4"/><path d="M3 16h42v5H3Zm0 13h42v5H3Z" fill="#53c2ed"/>
+      <path d="M18 22l-5 4 5 4m12-8l5 4-5 4m-5-9l-3 17" fill="none" stroke="#fff" stroke-width="2.5"/>
+    </symbol>
+    <symbol id="shield" viewBox="0 0 48 48">
+      <path d="M24 3L42 9v15c0 11-11 18-18 22C17 42 6 35 6 24V9Z" fill="#008db2"/>
+      <path d="M15 24l6 7 13-16" fill="none" stroke="#fff" stroke-width="4"/>
+    </symbol>
+    <symbol id="network" viewBox="0 0 48 48">
+      <path d="M14 9L3 24l11 15m20-30l11 15-11 15" fill="none" stroke="#00a4d6" stroke-width="5"/>
+      <circle cx="17" cy="24" r="4" fill="#71b83b"/><circle cx="31" cy="24" r="4" fill="#71b83b"/>
+    </symbol>
+    <symbol id="monitor" viewBox="0 0 48 48">
+      <path d="M6 5h36v29H6Z" fill="#168ccd"/><path d="M11 24l7-9 7 12 10-17" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <path d="M21 34v7h-9v4h24v-4h-9v-7" fill="#617b97"/>
+    </symbol>
+    <symbol id="storage" viewBox="0 0 48 48">
+      <rect x="4" y="6" width="40" height="36" rx="3" fill="#27a6bc"/><path d="M7 16h34M7 27h34M7 38h34" stroke="#c1f3f5" stroke-width="5"/>
+      <path d="M12 16h4m-4 11h4m-4 11h4" stroke="#087e99" stroke-width="3"/>
+    </symbol>
+    <symbol id="search" viewBox="0 0 48 48">
+      <circle cx="21" cy="20" r="15" fill="#168ccd"/><circle cx="21" cy="20" r="9" fill="#e1f5ff"/><path d="M31 31l12 12" stroke="#0078d4" stroke-width="7"/>
+    </symbol>
+    <symbol id="cosmos" viewBox="0 0 48 48">
+      <ellipse cx="24" cy="24" rx="23" ry="9" transform="rotate(-30 24 24)" fill="none" stroke="#50b5df" stroke-width="3"/>
+      <circle cx="24" cy="24" r="13" fill="#0078d4"/><circle cx="20" cy="19" r="4" fill="#83d7f4"/><path d="M36 5v8m-4-4h8" stroke="#7858c7" stroke-width="2"/>
+    </symbol>
+    <symbol id="key" viewBox="0 0 48 48">
+      <circle cx="18" cy="15" r="11" fill="#f3bf23"/><circle cx="18" cy="15" r="4" fill="#fff"/>
+      <path d="M15 23v21h7v-6h6v-6h-6v-9Z" fill="#e7a914"/>
+    </symbol>
+    <symbol id="identity" viewBox="0 0 48 48">
+      <path d="M24 3L44 25 24 45 4 25Z" fill="#31b6d5"/><path d="M24 3v42L4 25Z" fill="#0078d4"/><path d="M15 26l7 7 13-16" fill="none" stroke="#fff" stroke-width="3"/>
+    </symbol>
+    <symbol id="dns" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="20" fill="#168ccd"/><ellipse cx="24" cy="24" rx="9" ry="20" fill="none" stroke="#bceaff" stroke-width="2"/>
+      <path d="M5 24h38M9 13h30M9 35h30" stroke="#bceaff" stroke-width="2"/>
+    </symbol>
+  </defs>
+  <rect width="2080" height="1440" fill="#fff"/>
+  <text x="40" y="57" class="title">Foundry Launchpad</text>
+  <text x="40" y="88" class="subtitle">Private AI foundation  /  Central US  /  Non-production reference architecture</text>
+  <rect x="1780" y="31" width="260" height="43" rx="21" fill="#edf4fb"/>
+  <text x="1910" y="59" text-anchor="middle" class="tag">DESIGN PREVIEW</text>
+
+  <rect x="40" y="111" width="2000" height="38" rx="7" fill="#edf3f9"/>
+  <use href="#identity" x="55" y="117" width="26" height="26"/>
+  <text x="92" y="136" class="small">One corporate Entra tenant</text>
+  <text x="470" y="136" class="small">AI engineers: project-scoped access over approved private connectivity</text>
+  <text x="1500" y="136" class="small">Managed identities; engineers do not hold model keys</text>
+
+  <rect x="40" y="166" width="1190" height="980" rx="10" class="boundary"/>
+  <path d="M50 166h1170q10 0 10 10v55H40v-55q0-10 10-10Z" fill="#2169ac"/>
+  <text x="64" y="196" class="subscription">sub-ai-spokes-nonprod</text>
+  <text x="64" y="219" class="owner">Shared AI foundation + dedicated use-case infrastructure</text>
+  <rect x="1310" y="166" width="730" height="980" rx="10" class="boundary"/>
+  <path d="M1320 166h710q10 0 10 10v55h-730v-55q0-10 10-10Z" fill="#2169ac"/>
+  <text x="1334" y="196" class="subscription">sub-ai-hub-nonprod</text>
+  <text x="1334" y="219" class="owner">Platform-owned model access and network controls</text>
+
+  <rect x="64" y="250" width="1142" height="313" rx="8" class="group"/>
+  <text x="88" y="281" class="rg">rg-ai-spokes-infra-nonprod-cus</text>
+  <text x="1182" y="281" text-anchor="end" class="tag">SHARED FOUNDATION</text>
+  <rect x="88" y="300" width="1094" height="164" rx="8" fill="#f4f0fc" stroke="#c9b9e6"/>
+  <use href="#foundry" x="106" y="312" width="42" height="42"/>
+  <text x="160" y="337" class="heading">Shared private Microsoft Foundry account</text>
+  <text x="160" y="359" class="small">Agent Service infrastructure; no agents deployed</text>
+  <rect x="112" y="378" width="508" height="66" rx="6" fill="#fff" stroke="#c9b9e6"/>
+  <use href="#identity" x="128" y="392" width="34" height="34"/>
+  <text x="174" y="403" class="body" font-weight="700">ai-app-01 project</text>
+  <text x="174" y="427" class="small">Project identity / connections / capability host</text>
+  <rect x="646" y="378" width="512" height="66" rx="6" fill="#fff" stroke="#c9b9e6"/>
+  <use href="#identity" x="662" y="392" width="34" height="34"/>
+  <text x="708" y="403" class="body" font-weight="700">ai-app-02 project</text>
+  <text x="708" y="427" class="small">Project identity / connections / capability host</text>
+  <use href="#registry" x="109" y="479" width="42" height="42"/>
+  <text x="165" y="496" class="body" font-weight="700">Shared ACR Premium</text>
+  <text x="165" y="519" class="small">Private registry; no images deployed</text>
+  <use href="#monitor" x="650" y="479" width="42" height="42"/>
+  <text x="708" y="496" class="body" font-weight="700">Shared runtime monitoring</text>
+  <text x="708" y="519" class="small">Log Analytics + Application Insights</text>
+  <text x="112" y="546" class="tiny">Each project connects to its matching app's dedicated backing services below.</text>
+
+  <path d="M1182 342H1358" class="flow"/>
+  <rect x="1208" y="296" width="99" height="32" rx="5" fill="#fff"/>
+  <text x="1257" y="309" text-anchor="middle" class="tiny">Agent model</text>
+  <text x="1257" y="325" text-anchor="middle" class="tiny">connection*</text>
+
+  <rect x="64" y="626" width="555" height="391" rx="8" class="group"/>
+  <text x="88" y="657" class="rg">rg-ai-app-01-dev-cus</text>
+  <text x="595" y="657" text-anchor="end" class="tag">AI ENGINEERS</text>
+  <rect x="88" y="677" width="507" height="104" rx="7" fill="#f6f2fc" stroke="#c9b9e6"/>
+  <use href="#aca" x="107" y="698" width="54" height="54"/>
+  <text x="178" y="709" class="heading">Internal ACA environment</text>
+  <text x="178" y="735" class="small">Dedicated environment + runtime identity</text>
+  <text x="178" y="759" class="small">Future app / agent containers, not deployed</text>
+  <text x="88" y="815" class="tag">DEDICATED PRIVATE BACKING SERVICES</text>
+  <rect x="88" y="833" width="117" height="102" rx="6" class="card"/>
+  <use href="#storage" x="127" y="846" width="38" height="38"/>
+  <text x="146" y="906" text-anchor="middle" class="small">Storage</text>
+  <rect x="218" y="833" width="117" height="102" rx="6" class="card"/>
+  <use href="#search" x="257" y="846" width="38" height="38"/>
+  <text x="276" y="906" text-anchor="middle" class="small">AI Search</text>
+  <rect x="348" y="833" width="117" height="102" rx="6" class="card"/>
+  <use href="#cosmos" x="387" y="846" width="38" height="38"/>
+  <text x="406" y="906" text-anchor="middle" class="small">Cosmos DB</text>
+  <rect x="478" y="833" width="117" height="102" rx="6" class="card"/>
+  <use href="#key" x="517" y="846" width="38" height="38"/>
+  <text x="536" y="906" text-anchor="middle" class="small">Key Vault</text>
+  <use href="#monitor" x="91" y="956" width="32" height="32"/>
+  <text x="137" y="977" class="small">Own Log Analytics + Application Insights</text>
+
+  <rect x="650" y="626" width="556" height="391" rx="8" class="group"/>
+  <text x="674" y="657" class="rg">rg-ai-app-02-dev-cus</text>
+  <text x="1182" y="657" text-anchor="end" class="tag">AI ENGINEERS</text>
+  <rect x="674" y="677" width="508" height="104" rx="7" fill="#f6f2fc" stroke="#c9b9e6"/>
+  <use href="#aca" x="693" y="698" width="54" height="54"/>
+  <text x="764" y="709" class="heading">Internal ACA environment</text>
+  <text x="764" y="735" class="small">Dedicated environment + runtime identity</text>
+  <text x="764" y="759" class="small">Future app / agent containers, not deployed</text>
+  <text x="674" y="815" class="tag">DEDICATED PRIVATE BACKING SERVICES</text>
+  <rect x="674" y="833" width="117" height="102" rx="6" class="card"/>
+  <use href="#storage" x="713" y="846" width="38" height="38"/>
+  <text x="732" y="906" text-anchor="middle" class="small">Storage</text>
+  <rect x="804" y="833" width="117" height="102" rx="6" class="card"/>
+  <use href="#search" x="843" y="846" width="38" height="38"/>
+  <text x="862" y="906" text-anchor="middle" class="small">AI Search</text>
+  <rect x="934" y="833" width="117" height="102" rx="6" class="card"/>
+  <use href="#cosmos" x="973" y="846" width="38" height="38"/>
+  <text x="992" y="906" text-anchor="middle" class="small">Cosmos DB</text>
+  <rect x="1064" y="833" width="118" height="102" rx="6" class="card"/>
+  <use href="#key" x="1104" y="846" width="38" height="38"/>
+  <text x="1123" y="906" text-anchor="middle" class="small">Key Vault</text>
+  <use href="#monitor" x="677" y="956" width="32" height="32"/>
+  <text x="723" y="977" class="small">Own Log Analytics + Application Insights</text>
+
+  <path d="M342 677V592H1264V366H1358" class="future"/>
+  <path d="M928 677V592" fill="none" stroke="#263c55" stroke-width="3" stroke-dasharray="9 7"/>
+  <circle cx="928" cy="592" r="4" fill="#263c55"/>
+  <rect x="465" y="578" width="438" height="27" rx="5" fill="#f0f7ff"/>
+  <text x="684" y="598" text-anchor="middle" class="small">Future model calls: Entra token via APIM only</text>
+  <circle cx="316" cy="592" r="16" fill="#172b45"/><text x="316" y="598" class="number">1</text>
+
+  <rect x="1334" y="250" width="682" height="500" rx="8" class="group"/>
+  <text x="1358" y="281" class="rg">rg-ai-hub-services-nonprod-cus</text>
+  <rect x="1358" y="307" width="634" height="128" rx="8" fill="#e9f8f3" stroke="#68b7a0" stroke-width="2"/>
+  <use href="#gateway" x="1380" y="333" width="58" height="58"/>
+  <text x="1455" y="339" class="heading">API Management Standard v2</text>
+  <text x="1455" y="365" class="body">Central private AI gateway / model allowlist</text>
+  <text x="1455" y="391" class="small">Entra / chat tokens / embedding request limits / metrics</text>
+  <text x="1455" y="415" class="small">Inbound Private Link + outbound VNet integration</text>
+  <circle cx="1980" cy="312" r="16" fill="#172b45"/><text x="1980" y="318" class="number">2</text>
+
+  <path d="M1534 435V536" class="flow"/>
+  <text x="1550" y="477" class="small">Inference</text>
+  <text x="1550" y="500" class="small">Managed identity</text>
+  <path d="M1854 435V536" class="flow"/>
+  <text x="1870" y="477" class="small">Prompt</text>
+  <text x="1870" y="500" class="small">checks</text>
+  <rect x="1358" y="536" width="352" height="136" rx="7" class="card"/>
+  <use href="#foundry" x="1374" y="555" width="46" height="46"/>
+  <text x="1436" y="565" class="heading">Private Foundry</text>
+  <text x="1436" y="590" class="body">Model-only account</text>
+  <text x="1382" y="624" class="small">fast-chat / advanced-chat / embeddings</text>
+  <text x="1382" y="649" class="small">No direct application model access</text>
+  <circle cx="1698" cy="541" r="16" fill="#172b45"/><text x="1698" y="547" class="number">3</text>
+  <rect x="1734" y="536" width="258" height="136" rx="7" class="card"/>
+  <use href="#shield" x="1752" y="555" width="46" height="46"/>
+  <text x="1810" y="565" class="heading">Content Safety</text>
+  <text x="1810" y="591" class="small">Private endpoint</text>
+  <text x="1758" y="624" class="small">Gateway policy checks</text>
+  <text x="1758" y="649" class="small">Managed identity access</text>
+  <use href="#monitor" x="1363" y="698" width="30" height="30"/>
+  <text x="1406" y="718" class="small">Gateway telemetry / Log Analytics / Application Insights</text>
+  <text x="1406" y="740" class="tiny">5xx and 429 alerts / operational email action group</text>
+
+  <rect x="1334" y="782" width="682" height="340" rx="8" class="group"/>
+  <text x="1358" y="814" class="rg">rg-ai-hub-infra-nonprod-cus</text>
+  <use href="#dns" x="1358" y="843" width="45" height="45"/>
+  <text x="1420" y="862" class="heading">Shared private DNS</text>
+  <text x="1420" y="887" class="small">One DNS authority linked to both VNets</text>
+  <use href="#monitor" x="1358" y="914" width="45" height="45"/>
+  <text x="1420" y="933" class="heading">Private monitoring access</text>
+  <text x="1420" y="958" class="small">Azure Monitor Private Link Scope (AMPLS)</text>
+  <text x="1358" y="999" class="small">Private endpoints stay in infrastructure resource groups.</text>
+  <rect x="1358" y="1024" width="634" height="78" rx="6" fill="#eaf5fe" stroke="#9bc6e8"/>
+  <use href="#network" x="1371" y="1041" width="44" height="44"/>
+  <text x="1432" y="1051" class="heading">ai-hub VNet</text>
+  <text x="1432" y="1075" class="small">APIM integration subnet / endpoint subnet / NSGs</text>
+  <text x="1432" y="1094" class="tiny">Private ingress; no public model endpoint access</text>
+
+  <rect x="64" y="1041" width="1142" height="81" rx="7" fill="#eaf5fe" stroke="#9bc6e8"/>
+  <use href="#network" x="83" y="1058" width="46" height="46"/>
+  <text x="146" y="1070" class="heading">ai-spoke VNet</text>
+  <text x="146" y="1095" class="small">Dedicated ACA subnets / shared Agent Service subnet / endpoint subnet / NSGs</text>
+  <text x="1182" y="1114" text-anchor="end" class="tiny">In rg-ai-spokes-infra-nonprod-cus</text>
+  <path d="M1206 1081H1358" class="network" marker-start="url(#blue-arrow)" marker-end="url(#blue-arrow)"/>
+  <rect x="1227" y="1030" width="97" height="42" rx="5" fill="#fff"/>
+  <text x="1276" y="1047" text-anchor="middle" class="tiny">Bilateral</text>
+  <text x="1276" y="1067" text-anchor="middle" class="tiny">VNet peering</text>
+  <path d="M1334 342H1358" class="flow"/>
+  <path d="M1334 366H1358" class="future"/>
+
+  <rect x="40" y="1180" width="2000" height="105" rx="8" fill="#fff6d8" stroke="#ebbf46" stroke-width="2"/>
+  <use href="#network" x="64" y="1208" width="47" height="47"/>
+  <text x="129" y="1214" class="heading">Existing enterprise platform</text>
+  <text x="129" y="1242" class="body">Optional private access / routing / central DNS / private deployment runners</text>
+  <text x="129" y="1267" class="small">Customer-owned integration boundary. No Firewall, VPN, ExpressRoute or Application Gateway is provisioned here.</text>
+  <rect x="1720" y="1214" width="294" height="35" rx="17" fill="#ffe6a1"/>
+  <text x="1867" y="1237" text-anchor="middle" class="tag" style="fill:#805e06">NOT DEPLOYED BY LAUNCHPAD</text>
+  <path d="M630 1180V1146M1675 1180V1146" fill="none" stroke="#ae892b" stroke-width="2" stroke-dasharray="6 5"/>
+
+  <path d="M40 1323H98" class="flow"/>
+  <text x="110" y="1329" class="small">Configured gateway path</text>
+  <path d="M378 1323H436" class="future"/>
+  <text x="448" y="1329" class="small">Future application / agent wiring</text>
+  <path d="M798 1323H856" class="network"/>
+  <text x="868" y="1329" class="small">Private network relationship</text>
+  <text x="2040" y="1329" text-anchor="end" class="small">5 resource groups / 2 projects / 2 ACA environments / 1 shared registry</text>
+  <text x="40" y="1371" class="small">* Project identity model connection configured in IaC; validate live before agent use.</text>
+  <text x="2040" y="1371" text-anchor="end" class="small">All five RGs: monthly budgets / 80% and 100% notifications</text>
+  <text x="40" y="1400" class="small">Infrastructure only: no apps, agents, container images or end-user public ingress. Resource-group boxes show ownership, not VNet boundaries.</text>
+</svg>

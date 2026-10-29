@@ -17,6 +17,12 @@ export GATEWAY_CLIENT_ID=00000000-0000-0000-0000-000000000004
 export GATEWAY_SERVICE_PRINCIPAL_OBJECT_ID=00000000-0000-0000-0000-000000000005
 export GATEWAY_APP_ROLE_ID=00000000-0000-0000-0000-000000000006
 export APIM_PUBLISHER_EMAIL=validation@example.invalid
+export OPERATIONS_EMAIL=validation@example.invalid
+export BUDGET_START_DATE=2026-10-01T00:00:00Z
+export BUDGET_HUB_INFRA=100
+export BUDGET_HUB_SERVICES=1000
+export BUDGET_SPOKES_INFRA=150
+export BUDGET_PER_APP=200
 
 az bicep build --file "$root/infra/bicep/main.bicep" --no-restore --stdout > "$workdir/main.json"
 az bicep build-params --file "$root/infra/bicep/main.bicepparam" --no-restore --stdout > "$workdir/parameters.json"

@@ -3,6 +3,14 @@ locals {
   safety_name  = "cs-hub-${var.name_suffix}"
   apim_name    = "apim-ai-hub-${var.name_suffix}"
   api_name     = "foundry"
+  deployments = {
+    for alias, model in var.models : alias => {
+      model    = model.name
+      version  = model.version
+      sku_name = model.sku_name
+      capacity = model.capacity
+    }
+  }
 
   # The gateway forwards /v1/... to Foundry's OpenAI v1 API.
   foundry_backend_url = "${module.foundry.endpoint}/openai"
@@ -14,6 +22,7 @@ locals {
     responses-cancel        = { name = "Cancel a background response", method = "POST", path = "/v1/responses/{response_id}/cancel", params = ["response_id"] }
     responses-input-items   = { name = "List input items", method = "GET", path = "/v1/responses/{response_id}/input_items", params = ["response_id"] }
     chat-completions-create = { name = "Create a chat completion", method = "POST", path = "/v1/chat/completions", params = [] }
+    embeddings-create       = { name = "Create embeddings", method = "POST", path = "/v1/embeddings", params = [] }
   }
 
   foundry_dns_zones = var.private_networking ? [
@@ -42,14 +51,7 @@ module "foundry" {
   tags                = var.tags
   projects            = []
 
-  deployments = {
-    (var.model.name) = {
-      model    = var.model.name
-      version  = var.model.version
-      sku_name = var.model.sku_name
-      capacity = var.model.capacity
-    }
-  }
+  deployments = local.deployments
 
   private_networking         = var.private_networking
   private_endpoint_subnet_id = var.private_endpoint_subnet_id
@@ -276,12 +278,13 @@ resource "azurerm_api_management_api_policy" "foundry" {
   resource_group_name = var.resource_group_name
 
   xml_content = templatefile("${path.module}/gateway-policy.xml.tftpl", {
-    tenant_id         = var.tenant_id
-    client_id         = var.gateway_client_id
-    role              = var.gateway_role
-    tokens_per_minute = var.tokens_per_minute
-    content_safety    = var.deploy_content_safety
-    backend_url       = local.foundry_backend_url
+    tenant_id                     = var.tenant_id
+    client_id                     = var.gateway_client_id
+    role                          = var.gateway_role
+    tokens_per_minute             = var.tokens_per_minute
+    embedding_requests_per_minute = var.embedding_requests_per_minute
+    content_safety                = var.deploy_content_safety
+    backend_url                   = local.foundry_backend_url
   })
 
   depends_on = [

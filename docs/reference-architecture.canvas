@@ -5,7 +5,7 @@
     {"id":"enterprise","type":"text","text":"Existing enterprise platform\nOptional private access / routing / DNS\nNot provisioned here","x":0,"y":60,"width":300,"height":180},
     {"id":"ai_spokes","type":"group","label":"sub-ai-spokes-nonprod","x":340,"y":50,"width":1040,"height":1000,"color":"5"},
     {"id":"spokes_infra","type":"group","label":"rg-ai-spokes-infra-nonprod-cus","x":360,"y":100,"width":1000,"height":540,"color":"5"},
-    {"id":"spokes_network","type":"text","text":"Spokes VNet / NSGs / private endpoints\nDedicated ACA subnets\nShared Agent Service subnet","x":390,"y":150,"width":600,"height":100},
+    {"id":"spokes_network","type":"text","text":"ai-spoke VNet / NSGs / private endpoints\nDedicated ACA subnets\nShared Agent Service subnet","x":390,"y":150,"width":600,"height":100},
     {"id":"registry","type":"text","text":"Shared private ACR Premium\nShared runtime monitoring also belongs to this RG","x":1030,"y":150,"width":300,"height":100},
     {"id":"foundry","type":"group","label":"Shared private Foundry account","x":390,"y":290,"width":940,"height":300,"color":"5"},
     {"id":"app01_project","type":"text","text":"ai-app-01 project\nProject identity / connections / capability host","x":420,"y":370,"width":420,"height":130},
@@ -18,13 +18,13 @@
     {"id":"app02_data","type":"text","text":"Private Storage / Search\nCosmos DB / Key Vault","x":900,"y":900,"width":410,"height":90},
     {"id":"ai_hub","type":"group","label":"sub-ai-hub-nonprod","x":1460,"y":50,"width":800,"height":1000,"color":"4"},
     {"id":"hub_infra","type":"group","label":"rg-ai-hub-infra-nonprod-cus","x":1480,"y":100,"width":760,"height":300,"color":"4"},
-    {"id":"hub_network","type":"text","text":"Hub VNet / NSGs\nAPIM integration subnet\nPrivate endpoints","x":1500,"y":150,"width":350,"height":170},
+    {"id":"hub_network","type":"text","text":"ai-hub VNet / NSGs\nAPIM integration subnet\nPrivate endpoints","x":1500,"y":150,"width":350,"height":170},
     {"id":"shared_ops","type":"text","text":"Shared private DNS\nAzure Monitor Private Link Scope","x":1880,"y":150,"width":340,"height":170},
     {"id":"hub_services","type":"group","label":"rg-ai-hub-services-nonprod-cus","x":1480,"y":500,"width":760,"height":500,"color":"4"},
-    {"id":"gateway","type":"text","text":"Private APIM Standard v2\nEntra authentication / token limits / usage metrics","x":1510,"y":560,"width":700,"height":130},
+    {"id":"gateway","type":"text","text":"Private APIM Standard v2\nModel/operation allowlist / Entra / usage metrics\nChat token limits / embedding request limits / alerts","x":1510,"y":560,"width":700,"height":130},
     {"id":"safety","type":"text","text":"Private Content Safety","x":1510,"y":760,"width":320,"height":140},
-    {"id":"models","type":"text","text":"Private Foundry model account\nApproved model deployment","x":1870,"y":760,"width":340,"height":140},
-    {"id":"scope","type":"text","text":"Resource groups are ownership boundaries, not VNets. Projects stay under the shared account; ACA and backing services are dedicated per use case.\nSolid relationships are configured in the default profile. Future/optional edges describe integration, not deployed applications or tested model calls.\nApps and agents must use APIM, never the model account directly. Existing-network mode uses customer-managed routing and DNS.","x":0,"y":1150,"width":2260,"height":180}
+    {"id":"models","type":"text","text":"Private Foundry model account\nfast-chat / advanced-chat / embeddings","x":1870,"y":760,"width":340,"height":140},
+    {"id":"scope","type":"text","text":"Resource groups are ownership boundaries, not VNets. Projects stay under the shared account; ACA and backing services are dedicated per use case. Each RG has an approved monthly budget.\nSolid relationships are configured in the default profile. Future/optional edges describe integration, not deployed applications or tested model calls.\nAgents select ai-gateway/<model-deployment-name> through project managed identity. Apps and agents never call the model account directly. Existing-network mode uses customer-managed routing and DNS.","x":0,"y":1150,"width":2260,"height":180}
   ],
   "edges": [
     {"id":"e01","fromNode":"spokes_network","fromSide":"bottom","toNode":"app01_runtime","toSide":"top"},
@@ -41,7 +41,7 @@
     {"id":"e12","fromNode":"shared_ops","fromSide":"top","toNode":"spokes_network","toSide":"top"},
     {"id":"e13","fromNode":"app01_runtime","fromSide":"right","toNode":"gateway","toSide":"left","label":"Future app model calls"},
     {"id":"e14","fromNode":"app02_runtime","fromSide":"right","toNode":"gateway","toSide":"left","label":"Future app model calls"},
-    {"id":"e15","fromNode":"foundry","fromSide":"right","toNode":"gateway","toSide":"left","label":"Agent model connections to configure"},
+    {"id":"e15","fromNode":"foundry","fromSide":"right","toNode":"gateway","toSide":"left","label":"Project managed identity model connections"},
     {"id":"e16","fromNode":"enterprise","fromSide":"right","toNode":"spokes_network","toSide":"left","label":"Optional integration"},
     {"id":"e17","fromNode":"enterprise","fromSide":"top","toNode":"hub_network","toSide":"top","label":"Optional integration"}
   ]

@@ -46,7 +46,11 @@ def contract():
             resource_id(HUB, "Microsoft.Network/privateDnsZones/privatelink.example.com")
         ],
         "ampls_id": resource_id(HUB, "Microsoft.Insights/privateLinkScopes/test"),
-        "model": None,
+        "models": [
+            {"id": resource_id(HUB, f"Microsoft.CognitiveServices/accounts/models/deployments/{alias}"),
+             "api_version": "2025-06-01"}
+            for alias in ("fast-chat", "advanced-chat", "embeddings")
+        ],
         "capability_hosts": [],
     }
 
@@ -145,6 +149,15 @@ class VerifyTests(unittest.TestCase):
         self.broken_peering = True
         self.run_verification()
         self.assertEqual(self.verifier["failed"], 3)
+
+    def test_all_three_model_deployments_are_checked(self):
+        output = self.run_verification()
+        for alias in ("fast-chat", "advanced-chat", "embeddings"):
+            self.assertIn(f"model deployment {alias} Succeeded", output)
+            self.assertTrue(any(f"/deployments/{alias}?" in str(call) for call in self.calls))
+        self.data["models"].pop()
+        with self.assertRaisesRegex(ValueError, "all three"):
+            self.verifier["validate_contract"](self.data)
 
     def test_network_mode_must_be_explicit_boolean(self):
         for value in (None, "false", 0):

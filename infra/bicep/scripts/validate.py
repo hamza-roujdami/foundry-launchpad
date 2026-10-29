@@ -66,9 +66,15 @@ def cardinality(resource, path, applications, engineers):
     elif name == "connections":
         expected, size = "[length(variables('connectionSpecs'))]", 3
     elif name == "operations":
-        expected, size = "[length(variables('operationSpecs'))]", 6
+        expected, size = "[length(variables('operationSpecs'))]", 7
+    elif name == "deployments":
+        expected, size = "[length(items(coalesce(parameters('models'), createObject())))]", 3 if "hub-services" in path else 0
     elif name == "engineers":
         expected, size = "[length(parameters('engineerGroupIds'))]", engineers
+    elif name == "budgets":
+        expected, size = "[length(variables('budgetSpecs'))]", 3 + applications
+    elif name == "alerts":
+        expected, size = "[length(variables('alertSpecs'))]", 2
     else:
         raise AssertionError(f"Unrecognized resource copy contract: {name}")
     assert count == expected, (path, count, expected)
@@ -114,6 +120,7 @@ def canonical_policy(source):
         "${role}": "Gateway.Invoke",
         "${backend_url}": "https://backend.invalid/openai", "__BACKEND_URL__": "https://backend.invalid/openai",
         "${tokens_per_minute}": "10000", "__TOKENS_PER_MINUTE__": "10000",
+        "${embedding_requests_per_minute}": "60", "__EMBEDDING_REQUESTS_PER_MINUTE__": "60",
     }.items():
         source = source.replace(old, new)
 
@@ -136,8 +143,10 @@ class Contracts(unittest.TestCase):
         root = self.template
         self.assertEqual(root["parameters"]["location"]["defaultValue"], "centralus")
         self.assertEqual([app["name"] for app in root["parameters"]["useCases"]["defaultValue"]], ["ai-app-01", "ai-app-02"])
-        self.assertEqual(root["parameters"]["model"]["defaultValue"], {
-            "name": "gpt-6-sol", "version": "2026-09-22", "skuName": "DataZoneStandard", "capacity": 15,
+        self.assertEqual(root["parameters"]["models"]["defaultValue"], {
+            "fast-chat": {"name": "gpt-6.1-sol", "version": "2026-09-29", "skuName": "DataZoneStandard", "capacity": 10},
+            "advanced-chat": {"name": "gpt-6.1-terra", "version": "2026-10-26", "skuName": "DataZoneStandard", "capacity": 10},
+            "embeddings": {"name": "text-embedding-3-large", "version": "1", "skuName": "DataZoneStandard", "capacity": 10},
         })
         expected = {
             "microsoft.resources/resourcegroups": 5,
@@ -150,8 +159,8 @@ class Contracts(unittest.TestCase):
             "microsoft.network/privatednszones/virtualnetworklinks": 28,
             "microsoft.cognitiveservices/accounts": 3,
             "microsoft.cognitiveservices/accounts/projects": 2,
-            "microsoft.cognitiveservices/accounts/deployments": 1,
-            "microsoft.cognitiveservices/accounts/projects/connections": 8,
+            "microsoft.cognitiveservices/accounts/deployments": 3,
+            "microsoft.cognitiveservices/accounts/projects/connections": 10,
             "microsoft.cognitiveservices/accounts/projects/capabilityhosts": 2,
             "microsoft.containerregistry/registries": 1,
             "microsoft.app/managedenvironments": 2,
@@ -165,7 +174,10 @@ class Contracts(unittest.TestCase):
             "microsoft.insights/privatelinkscopes/scopedresources": 8,
             "microsoft.authorization/roleassignments": 20,
             "microsoft.documentdb/databaseaccounts/sqlroleassignments": 4,
-            "microsoft.apimanagement/service/apis/operations": 6,
+            "microsoft.apimanagement/service/apis/operations": 7,
+            "microsoft.consumption/budgets": 5,
+            "microsoft.insights/actiongroups": 1,
+            "microsoft.insights/metricalerts": 2,
         }
         counts = inventory(root)
         for kind, count in expected.items():
@@ -265,8 +277,54 @@ class Contracts(unittest.TestCase):
         operations = hub["variables"]["operationSpecs"]
         self.assertEqual({operation["id"] for operation in operations}, {
             "responses-create", "responses-get", "responses-delete", "responses-cancel",
-            "responses-input-items", "chat-completions-create",
+            "responses-input-items", "chat-completions-create", "embeddings-create",
         })
+
+    def test_gateway_model_connection(self):
+        bindings = nested(self.template, "projectBindings")
+        connection = resource_map(bindings)["gateway"]
+        self.assertEqual(connection["condition"], "[parameters('enableAgents')]")
+        properties = connection["properties"]
+        self.assertEqual(properties["authType"], "ProjectManagedIdentity")
+        self.assertEqual(properties["category"], "ApiManagement")
+        self.assertEqual(properties["audience"], "[parameters('gatewayAudience')]")
+        self.assertEqual(properties["target"], "[parameters('gatewayUrl')]")
+        self.assertEqual(properties["metadata"]["deploymentInPath"], "false")
+        self.assertEqual(properties["metadata"]["inferenceAPIVersion"], "v1")
+        self.assertIn("string(", properties["metadata"]["models"])
+        self.assertIn("fast-chat", properties["metadata"]["models"])
+        self.assertIn("advanced-chat", properties["metadata"]["models"])
+        self.assertNotIn("embeddings", properties["metadata"]["models"])
+        self.assertNotIn("credentials", properties)
+        params = resource_map(self.template)["projectBindings"]["properties"]["parameters"]
+        self.assertEqual(params["gatewayAudience"]["value"], "[format('api://{0}', parameters('gatewayClientId'))]")
+        self.assertIn("gatewayUrl", params["gatewayUrl"]["value"])
+
+    def test_operational_controls(self):
+        budget = next(resource for resource in resources(nested(self.template, "budgets")) if resource["type"] == "Microsoft.Consumption/budgets")["properties"]
+        self.assertEqual(budget["category"], "Cost")
+        self.assertEqual(budget["timeGrain"], "Monthly")
+        self.assertEqual({n["threshold"] for n in budget["notifications"].values()}, {80, 100})
+        self.assertTrue(all(n["thresholdType"] == "Actual" for n in budget["notifications"].values()))
+        alerts = nested(self.template, "gatewayAlerts")
+        specs = alerts["variables"]["alertSpecs"]
+        self.assertEqual({s["value"] for s in specs}, {"5xx", "429"})
+        self.assertEqual(resource_map(alerts)["alerts"]["properties"]["scopes"], ["[parameters('gatewayId')]"])
+        self.assertNotIn("defaultValue", self.template["parameters"]["operations"])
+
+    def test_readiness_contract(self):
+        readiness = self.template["outputs"]["readiness"]
+        self.assertEqual(readiness["type"], "array")
+        entry = readiness["copy"]["input"]
+        self.assertEqual(set(entry), {
+            "name", "project_id", "project_endpoint", "private_urls",
+            "gateway_url", "gateway_audience", "gateway_id", "connection_name",
+            "model", "agent_model", "agents_enabled", "registry_url",
+        })
+        self.assertEqual(entry["connection_name"], "ai-gateway")
+        self.assertEqual(len(entry["private_urls"]), 4)
+        self.assertEqual(entry["agent_model"], "ai-gateway/fast-chat")
+        self.assertIn("gatewayUrl", entry["gateway_url"])
 
     def test_example_environment_parameters(self):
         # az build-params stdout wraps parametersJson in newer CLI releases.

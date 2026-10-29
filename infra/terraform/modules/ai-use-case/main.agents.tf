@@ -36,6 +36,40 @@ locals {
   } : {}
 }
 
+resource "azapi_resource" "gateway_connection" {
+  for_each = var.enable_agent_infrastructure ? toset(["ai-gateway"]) : toset([])
+
+  # Microsoft's APIM connection sample uses this contract; embedded schemas omit ProjectManagedIdentity.
+  schema_validation_enabled = false
+  type                      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview"
+  name                      = each.key
+  parent_id                 = var.foundry.project_id
+  locks                     = [var.foundry.id]
+  body = {
+    properties = {
+      category      = "ApiManagement"
+      target        = var.gateway.url
+      authType      = "ProjectManagedIdentity"
+      audience      = var.gateway.audience
+      isSharedToAll = false
+      metadata = {
+        deploymentInPath    = "false"
+        inferenceAPIVersion = "v1"
+        models = jsonencode([for alias, model in var.gateway.models : {
+          name = alias
+          properties = {
+            model = {
+              name    = model.name
+              version = model.version
+              format  = "OpenAI"
+            }
+          }
+        }])
+      }
+    }
+  }
+}
+
 resource "azapi_resource" "agent_connection" {
   for_each = local.agent_connections
 
