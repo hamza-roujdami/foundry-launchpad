@@ -136,13 +136,13 @@ def validate_contract(data):
     )
     require(isinstance(data.get("managed_networks"), bool), "managed_networks must be a boolean")
     dns_zones(data)
-    require("model" in data, "model output is missing (use null if not configured)")
-    if data["model"] is not None:
-        strings(data["model"], ["id", "api_version"], "model")
+    require(isinstance(data.get("models"), list) and len(data["models"]) == 3, "models must contain all three governed deployments")
+    for model in data["models"]:
+        strings(model, ["id", "api_version"], "model")
+    require({model["id"].rsplit("/", 1)[-1] for model in data["models"]} == {"fast-chat", "advanced-chat", "embeddings"}, "models must contain each governed alias exactly once")
     ids = [data["ampls_id"], *(v["id"] for v in data["vnets"].values())]
     ids += [v["id"] for key in ("private_services", "monitoring_services") for v in data[key]]
-    if data["model"] is not None:
-        ids.append(data["model"]["id"])
+    ids += [model["id"] for model in data["models"]]
     ids += [host["id"] for host in data["capability_hosts"]]
     allowed = {value.lower() for value in subscriptions.values()}
     for resource_id in ids:
@@ -300,12 +300,11 @@ def verify(data):
             for setting in ("publicNetworkAccessForIngestion", "publicNetworkAccessForQuery"):
                 check(f"{label} {setting} Disabled", properties(result).get(setting) == "Disabled")
 
-    if data["model"] is not None:
-        model = resource_get("model deployment", data["model"])
+    for deployment in data["models"]:
+        label = f"model deployment {deployment['id'].rsplit('/', 1)[-1]}"
+        model = resource_get(label, deployment)
         if model is not None:
-            check("model deployment Succeeded", properties(model).get("provisioningState") == "Succeeded")
-    else:
-        print("SKIP: model deployment not configured")
+            check(f"{label} Succeeded", properties(model).get("provisioningState") == "Succeeded")
 
     for host in data["capability_hosts"]:
         label = f"capability host {host['id'].split('/projects/')[1].split('/')[0]}"

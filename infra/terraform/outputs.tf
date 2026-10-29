@@ -33,6 +33,24 @@ output "registry_name" {
   value       = azurerm_container_registry.ai_spokes.name
 }
 
+output "readiness" {
+  description = "Non-secret input for infra/scripts/smoke.py. Export only this output, not the complete Terraform state."
+  value = [for name, use_case in module.ai_use_case : {
+    name             = name
+    project_id       = module.ai_spokes_foundry.project_ids[name]
+    project_endpoint = use_case.project_endpoint
+    private_urls     = [for key in ["storage_url", "search_url", "cosmos_url", "vault_url"] : use_case.backing_services[key]]
+    gateway_url      = "${module.ai_hub_services.gateway_url}/v1"
+    gateway_audience = "api://${azuread_application.gateway.client_id}"
+    gateway_id       = module.ai_hub_services.apim_id
+    connection_name  = "ai-gateway"
+    model            = "fast-chat"
+    agent_model      = "ai-gateway/fast-chat"
+    agents_enabled   = var.enable_agent_infrastructure
+    registry_url     = "https://${azurerm_container_registry.ai_spokes.login_server}"
+  }]
+}
+
 output "verification" {
   description = "Non-secret control-plane contract consumed by infra/terraform/verify.sh."
   value = {
@@ -80,7 +98,7 @@ output "verification" {
     managed_networks = var.existing_networks == null
     dns_zone_ids     = distinct(values(local.ai_hub_network.dns_zone_ids))
     ampls_id         = azurerm_monitor_private_link_scope.this.id
-    model            = { id = module.ai_hub_services.model_deployment_id, api_version = "2025-06-01" }
+    models           = [for id in values(module.ai_hub_services.model_deployment_ids) : { id = id, api_version = "2025-06-01" }]
   }
 }
 

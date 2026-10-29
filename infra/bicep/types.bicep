@@ -13,6 +13,14 @@ type Model = {
 }
 
 @export()
+@description('Fixed governed model aliases; deployments are shared by both projects.')
+type Models = {
+  'fast-chat': Model
+  'advanced-chat': Model
+  embeddings: Model
+}
+
+@export()
 @description('Stable use-case subnet slot; never renumber an existing slot.')
 type UseCase = {
   @minLength(3)
@@ -101,3 +109,23 @@ type ApplicationBacking = {
 @export()
 @description('Named Azure resource.')
 type NamedResource = { name: string, id: string }
+
+@export()
+@description('Approved operational contact and monthly budgets, in billing currency; alerts do not stop spending.')
+type Operations = {
+  @minLength(3)
+  email: string
+  @minLength(20)
+  @maxLength(20)
+  budgetStartDate: string
+  monthlyBudgets: {
+    @minValue(1)
+    hubInfra: int
+    @minValue(1)
+    hubServices: int
+    @minValue(1)
+    spokesInfra: int
+    @minValue(1)
+    perApp: int
+  }
+}

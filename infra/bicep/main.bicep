@@ -1,6 +1,6 @@
 targetScope = 'subscription'
 
-import { Tags, Model, UseCase, ExistingNetworks, Project, RuntimeIdentity, ApplicationBacking, NamedResource } from './types.bicep'
+import { Tags, Models, UseCase, ExistingNetworks, Project, RuntimeIdentity, ApplicationBacking, NamedResource, Operations } from './types.bicep'
 
 @description('Corporate Entra tenant shared by both subscriptions.')
 @minLength(36)
@@ -28,6 +28,8 @@ param gatewayServicePrincipalObjectId string
 param gatewayAppRoleId string
 @description('Actual APIM publisher contact email.')
 param publisherEmail string
+@description('Approved operational contact, first day of deployment month and monthly resource-group budgets.')
+param operations Operations
 @description('Approved region. Model availability must be checked, never inferred.')
 param location string = 'centralus'
 @description('Short region suffix in resource-group names.')
@@ -41,10 +43,17 @@ param tags Tags = { workload: 'foundry-launchpad', environment: 'nonprod' }
 @maxLength(16)
 param useCases UseCase[] = [{ name: 'ai-app-01', subnetSlot: 1 }, { name: 'ai-app-02', subnetSlot: 2 }]
 @description('Approved model name/version/SKU/capacity; deployment can fail if region or quota is unavailable.')
-param model Model = { name: 'gpt-6-sol', version: '2026-09-22', skuName: 'DataZoneStandard', capacity: 15 }
+param models Models = {
+  'fast-chat': { name: 'gpt-6.1-sol', version: '2026-09-29', skuName: 'DataZoneStandard', capacity: 10 }
+  'advanced-chat': { name: 'gpt-6.1-terra', version: '2026-10-26', skuName: 'DataZoneStandard', capacity: 10 }
+  embeddings: { name: 'text-embedding-3-large', version: '1', skuName: 'DataZoneStandard', capacity: 10 }
+}
 @description('Per-verified-caller token allowance, not backend reserved capacity.')
 @minValue(1)
 param tokensPerMinute int = 10000
+@description('Embedding requests per verified caller per minute, separate from chat token limits.')
+@minValue(1)
+param embeddingRequestsPerMinute int = 60
 @description('Existing engineer Entra group object IDs granted project-scoped Foundry User.')
 param engineerGroupIds string[] = []
 @description('Provision network injection, BYO service connections and project capability hosts; no agents.')
@@ -148,7 +157,8 @@ module hub 'modules/ai-hub-services.bicep' = {
     tenantId: tenantId
     gatewayClientId: gatewayClientId
     apimSubnetId: apimSubnet
-    model: model
+    models: models
+    embeddingRequestsPerMinute: embeddingRequestsPerMinute
     tokensPerMinute: tokensPerMinute
     bootstrapPublicAccess: bootstrapGatewayPublicAccess
   }
@@ -296,6 +306,9 @@ module projectBindings 'modules/project-bindings.bicep' = [
       backing: applications[i].outputs.backing
       monitoring: applications[i].outputs.monitoring
       location: location
+      gatewayUrl: hub.outputs.gatewayUrl
+      gatewayAudience: 'api://${gatewayClientId}'
+      models: models
     }
     dependsOn: [backingEndpoints, spokesEndpoints, hubPeering, spokesPeering, gatewayClosure]
   }
@@ -313,6 +326,51 @@ module privateMonitoring 'modules/private-monitoring.bicep' = {
     applicationMonitoring: [for (app, i) in useCases: applications[i].outputs.monitoring]
   }
 }
+
+module gatewayAlerts 'modules/gateway-alerts.bicep' = {
+  name: 'gateway-alerts'
+  scope: resourceGroup(hubSubscriptionId, hubServices)
+  params: { gatewayId: hub.outputs.apimId, email: operations.email, tags: tags }
+}
+var appBudgetSpecs = [for app in useCases: {
+  subscriptionId: spokesSubscriptionId
+  group: 'rg-${app.name}-dev-${regionCode}'
+  amount: operations.monthlyBudgets.perApp
+}]
+var budgetSpecs = concat([
+  { subscriptionId: hubSubscriptionId, group: hubInfra, amount: operations.monthlyBudgets.hubInfra }
+  { subscriptionId: hubSubscriptionId, group: hubServices, amount: operations.monthlyBudgets.hubServices }
+  { subscriptionId: spokesSubscriptionId, group: spokesInfra, amount: operations.monthlyBudgets.spokesInfra }
+], appBudgetSpecs)
+module budgets 'modules/budget.bicep' = [
+  for budget in budgetSpecs: {
+    name: 'budget-${budget.group}'
+    scope: resourceGroup(budget.subscriptionId, budget.group)
+    params: { amount: budget.amount, startDate: operations.budgetStartDate, email: operations.email }
+    dependsOn: [hubGroups, spokesGroups]
+  }
+]
+
+@description('Non-secret input for infra/scripts/smoke.py. Live inference is a separate explicit operator step.')
+output readiness array = [for (app, i) in useCases: {
+  name: app.name
+  project_id: projects.outputs.projects[i].id
+  project_endpoint: projects.outputs.projects[i].endpoint
+  private_urls: [
+    applications[i].outputs.backing.storageEndpoint
+    applications[i].outputs.backing.searchEndpoint
+    applications[i].outputs.backing.cosmosEndpoint
+    'https://${last(split(applications[i].outputs.backing.vaultId, '/'))}${environment().suffixes.keyvaultDns}'
+  ]
+  gateway_url: hub.outputs.gatewayUrl
+  gateway_audience: 'api://${gatewayClientId}'
+  gateway_id: hub.outputs.apimId
+  connection_name: 'ai-gateway'
+  model: 'fast-chat'
+  agent_model: 'ai-gateway/fast-chat'
+  agents_enabled: enableAgentInfrastructure
+  registry_url: 'https://${spokes.outputs.registryLoginServer}'
+}]
 
 @description('OpenAI v1-compatible APIM endpoint; never call the Foundry model endpoint directly.')
 output gatewayUrl string = hub.outputs.gatewayUrl

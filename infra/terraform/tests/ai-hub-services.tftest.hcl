@@ -42,15 +42,20 @@ run "private_model_gateway" {
   }
 
   variables {
-    resource_group_name                  = "test"
-    location                             = "centralus"
-    tags                                 = {}
-    name_suffix                          = "123456"
-    publisher_email                      = "platform@example.com"
-    apim_sku_name                        = "StandardV2_1"
-    gateway_public_access                = false
-    tokens_per_minute                    = 10000
-    model                                = { name = "gpt-6-sol", version = "2026-09-22", sku_name = "DataZoneStandard", capacity = 15 }
+    resource_group_name           = "test"
+    location                      = "centralus"
+    tags                          = {}
+    name_suffix                   = "123456"
+    publisher_email               = "platform@example.com"
+    apim_sku_name                 = "StandardV2_1"
+    gateway_public_access         = false
+    tokens_per_minute             = 10000
+    embedding_requests_per_minute = 60
+    models = {
+      fast-chat     = { name = "gpt-6.1-sol", version = "2026-09-29", sku_name = "DataZoneStandard", capacity = 10 }
+      advanced-chat = { name = "gpt-6.1-terra", version = "2026-10-26", sku_name = "DataZoneStandard", capacity = 10 }
+      embeddings    = { name = "text-embedding-3-large", version = "1", sku_name = "DataZoneStandard", capacity = 10 }
+    }
     deploy_content_safety                = false
     tenant_id                            = "22222222-2222-2222-2222-222222222222"
     gateway_client_id                    = "33333333-3333-3333-3333-333333333333"
@@ -74,7 +79,7 @@ run "private_model_gateway" {
     error_message = "The private gateway needs both outbound VNet integration and inbound Private Link."
   }
   assert {
-    condition     = length(azurerm_api_management_api_operation.this) == 6 && !azurerm_api_management_api.foundry.subscription_required
+    condition     = length(azurerm_api_management_api_operation.this) == 7 && azurerm_api_management_api_operation.this["embeddings-create"].url_template == "/v1/embeddings" && !azurerm_api_management_api.foundry.subscription_required
     error_message = "The supported inference routes must use Entra authentication without requiring a subscription key."
   }
   assert {
@@ -84,5 +89,18 @@ run "private_model_gateway" {
   assert {
     condition     = length(azurerm_cognitive_account.content_safety) == 0
     error_message = "Content Safety must not be provisioned when disabled."
+  }
+  assert {
+    condition = (
+      toset(keys(local.deployments)) == toset(["fast-chat", "advanced-chat", "embeddings"]) &&
+      local.deployments["fast-chat"].model == "gpt-6.1-sol" &&
+      local.deployments["advanced-chat"].model == "gpt-6.1-terra" &&
+      local.deployments["embeddings"].model == "text-embedding-3-large" &&
+      length(output.model_deployment_ids) == 3 &&
+      strcontains(azurerm_api_management_api_policy.foundry.xml_content, "model_not_allowed") &&
+      strcontains(azurerm_api_management_api_policy.foundry.xml_content, "rate-limit-by-key calls=\"60\"") &&
+      strcontains(azurerm_api_management_api_policy.foundry.xml_content, "EmbeddingTokens")
+    )
+    error_message = "Deploy all three aliases and render the operation allowlist, embedding request limit and usage metric."
   }
 }

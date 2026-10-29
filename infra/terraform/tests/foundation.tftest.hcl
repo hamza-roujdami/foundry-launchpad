@@ -38,6 +38,11 @@ variables {
   use_cases                 = ["ai-app-01", "ai-app-02"]
   region_code               = "cus"
   existing_networks         = null
+  operations = {
+    email             = "operations@example.com"
+    budget_start_date = "2026-10-01T00:00:00Z"
+    monthly_budgets   = { hub_infra = 100, hub_services = 1000, spokes_infra = 150, per_app = 200 }
+  }
 }
 
 override_module {
@@ -70,9 +75,10 @@ override_module {
   target = module.ai_hub_services
   outputs = {
     gateway_url             = "https://test.azure-api.net/foundry"
+    apim_id                 = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/models/providers/Microsoft.ApiManagement/service/test"
     monitoring_resource_ids = {}
     private_service_ids     = []
-    model_deployment_id     = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/models/providers/Microsoft.CognitiveServices/accounts/models/deployments/test"
+    model_deployment_ids    = { for alias in ["fast-chat", "advanced-chat", "embeddings"] : alias => "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/models/providers/Microsoft.CognitiveServices/accounts/models/deployments/${alias}" }
   }
 }
 
@@ -85,7 +91,7 @@ override_module {
     monitoring_resource_ids = {}
     private_service_ids     = []
     project_endpoint        = "https://shared.services.ai.azure.com/api/projects/test"
-    backing_services        = {}
+    backing_services        = { storage_url = "https://test.blob.core.windows.net", search_url = "https://test.search.windows.net", cosmos_url = "https://test.documents.azure.com", vault_url = "https://test.vault.azure.net" }
     environment_id          = "test"
     capability_host_id      = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/engineering/providers/Microsoft.CognitiveServices/accounts/shared/projects/test/capabilityHosts/agents"
   }
@@ -101,7 +107,7 @@ override_module {
   outputs = {
     id                    = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/engineering/providers/Microsoft.CognitiveServices/accounts/shared"
     name                  = "shared"
-    project_ids           = {}
+    project_ids           = { for name in ["ai-app-01", "ai-app-02"] : name => "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/engineering/providers/Microsoft.CognitiveServices/accounts/shared/projects/${name}" }
     project_principal_ids = {}
     project_endpoints     = {}
   }
@@ -117,6 +123,29 @@ override_module {
 
 run "two_subscription_foundation" {
   command = plan
+  assert {
+    condition = length(output.readiness) == 2 && alltrue([
+      for entry in output.readiness : (
+        toset(keys(entry)) == toset(["name", "project_id", "project_endpoint", "private_urls", "gateway_url", "gateway_audience", "gateway_id", "connection_name", "model", "agent_model", "agents_enabled", "registry_url"]) &&
+        entry.gateway_url == "https://test.azure-api.net/foundry/v1" &&
+        entry.agent_model == "ai-gateway/fast-chat" &&
+        length(entry.private_urls) == 4
+      )
+    ])
+    error_message = "Both use cases must export the same complete smoke contract as Bicep, using only the gateway model."
+  }
+  assert {
+    condition = (
+      length(azurerm_consumption_budget_resource_group.hub) == 2 &&
+      length(azurerm_consumption_budget_resource_group.spokes) == 3 &&
+      length(azurerm_monitor_metric_alert.gateway) == 2 &&
+      azurerm_monitor_action_group.operations.email_receiver[0].email_address == var.operations.email &&
+      azurerm_monitor_metric_alert.gateway["errors"].criteria[0].threshold == 5 &&
+      azurerm_monitor_metric_alert.gateway["throttles"].criteria[0].threshold == 10 &&
+      alltrue([for budget in azurerm_consumption_budget_resource_group.hub : toset([for notice in budget.notification : notice.threshold]) == toset([80, 100])])
+    )
+    error_message = "Provide five RG budgets, two gateway alerts and approved email notifications without subscription-wide budgets."
+  }
   assert {
     condition     = output.verification.managed_networks && length(output.verification.dns_zone_ids) == 1
     error_message = "Verification must check managed topology and only the explicitly supplied DNS zones."
@@ -137,6 +166,30 @@ run "two_subscription_foundation" {
     condition     = output.verification.subscriptions.ai_hub != output.verification.subscriptions.ai_spokes && output.verification.tenant_id == var.tenant_id
     error_message = "Verification must preserve explicit tenant and subscription boundaries."
   }
+}
+
+run "invalid_budget_amount" {
+  command = plan
+  variables {
+    operations = {
+      email             = "operations@example.com"
+      budget_start_date = "2026-10-01T00:00:00Z"
+      monthly_budgets   = { hub_infra = 0, hub_services = 1000, spokes_infra = 150, per_app = 200 }
+    }
+  }
+  expect_failures = [var.operations]
+}
+
+run "invalid_budget_date" {
+  command = plan
+  variables {
+    operations = {
+      email             = "operations@example.com"
+      budget_start_date = "2026-10-15T00:00:00Z"
+      monthly_budgets   = { hub_infra = 100, hub_services = 1000, spokes_infra = 150, per_app = 200 }
+    }
+  }
+  expect_failures = [var.operations]
 }
 
 run "subscriptions_must_differ" {
@@ -174,9 +227,25 @@ run "use_case_name_too_long" {
 run "invalid_capacity" {
   command = plan
   variables {
-    model = { name = "test", version = "1", sku_name = "Standard", capacity = 0 }
+    models = { for alias in ["fast-chat", "advanced-chat", "embeddings"] : alias => { name = "test", version = "1", sku_name = "Standard", capacity = 0 } }
   }
-  expect_failures = [var.model]
+  expect_failures = [var.models]
+}
+
+run "invalid_model_aliases" {
+  command = plan
+  variables {
+    models = { other = { name = "test", version = "1", sku_name = "Standard", capacity = 10 } }
+  }
+  expect_failures = [var.models]
+}
+
+run "invalid_embedding_limit" {
+  command = plan
+  variables {
+    embedding_requests_per_minute = 0
+  }
+  expect_failures = [var.embedding_requests_per_minute]
 }
 
 run "invalid_token_limit" {

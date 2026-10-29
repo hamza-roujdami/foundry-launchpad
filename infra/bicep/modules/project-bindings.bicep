@@ -1,4 +1,4 @@
-import { Backing, Monitoring } from '../types.bicep'
+import { Backing, Monitoring, Models } from '../types.bicep'
 
 @description('Shared Foundry account name.')
 param accountName string
@@ -18,6 +18,12 @@ param backing Backing
 param monitoring Monitoring
 @description('Approved Azure region.')
 param location string
+@description('Central APIM OpenAI v1 endpoint.')
+param gatewayUrl string
+@description('Gateway Entra audience for the project managed identity.')
+param gatewayAudience string
+@description('Approved model exposed by APIM.')
+param models Models
 
 resource account 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing = { name: accountName }
 resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' existing = {
@@ -79,7 +85,29 @@ resource tracing 'Microsoft.CognitiveServices/accounts/projects/connections@2025
     metadata: { ApiType: 'Azure', ResourceId: monitoring.appInsightsId }
   }
 }
-
+resource gateway 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = if (enableAgents) {
+  parent: project
+  name: 'ai-gateway'
+  properties: {
+    category: 'ApiManagement'
+    target: gatewayUrl
+    // Microsoft's APIM connection sample uses these fields, absent from the bundled schema.
+    #disable-next-line BCP036
+    authType: 'ProjectManagedIdentity'
+    #disable-next-line BCP037
+    audience: gatewayAudience
+    isSharedToAll: false
+    metadata: {
+      deploymentInPath: 'false'
+      inferenceAPIVersion: 'v1'
+      models: string(map(['fast-chat', 'advanced-chat'], alias => {
+        name: alias
+        properties: { model: { name: models[alias].name, version: models[alias].version, format: 'OpenAI' } }
+      }))
+    }
+  }
+  dependsOn: [tracing]
+}
 var connectionSpecs = [
   { name: 'agent-files', category: 'AzureStorageAccount', target: backing.storageEndpoint, id: backing.storageId }
   { name: 'agent-search', category: 'CognitiveSearch', target: backing.searchEndpoint, id: backing.searchId }

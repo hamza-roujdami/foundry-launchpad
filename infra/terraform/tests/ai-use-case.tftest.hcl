@@ -65,7 +65,12 @@ variables {
   tags                = { workload = "test" }
   name_suffix         = "test01"
   use_case_name       = "test-use-case"
-  tenant_id           = "00000000-0000-0000-0000-000000000000"
+  gateway = {
+    url      = "https://gateway.azure-api.net/foundry/v1"
+    audience = "api://55555555-5555-5555-5555-555555555555"
+    models   = { fast-chat = { name = "gpt-6.1-sol", version = "2026-09-29" }, advanced-chat = { name = "gpt-6.1-terra", version = "2026-10-26" } }
+  }
+  tenant_id = "00000000-0000-0000-0000-000000000000"
   registry = {
     id           = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/foundation/providers/Microsoft.ContainerRegistry/registries/shared"
     name         = "shared"
@@ -138,8 +143,22 @@ run "private_use_case" {
     error_message = "Agent Service permissions must use the project identity at backing-resource scope, including Cosmos Operator and SQL data access."
   }
   assert {
-    condition     = length(output.private_service_ids) == 5 && output.project_principal_id == var.foundry.project_principal_id && output.identity_principal_id != output.project_principal_id && toset(keys(output.monitoring_resource_ids)) == toset(["logs", "traces"]) && length(output.connections) == 4
-    error_message = "The infrastructure-only contract must report five private services, separate runtime/project identities and four connections."
+    condition     = length(output.private_service_ids) == 5 && output.project_principal_id == var.foundry.project_principal_id && output.identity_principal_id != output.project_principal_id && toset(keys(output.monitoring_resource_ids)) == toset(["logs", "traces"]) && length(output.connections) == 5
+    error_message = "The infrastructure-only contract must report five private services, separate runtime/project identities and five connections."
+  }
+  assert {
+    condition = (
+      azapi_resource.gateway_connection["ai-gateway"].parent_id == var.foundry.project_id &&
+      azapi_resource.gateway_connection["ai-gateway"].body.properties.category == "ApiManagement" &&
+      azapi_resource.gateway_connection["ai-gateway"].body.properties.authType == "ProjectManagedIdentity" &&
+      azapi_resource.gateway_connection["ai-gateway"].body.properties.target == var.gateway.url &&
+      azapi_resource.gateway_connection["ai-gateway"].body.properties.audience == var.gateway.audience &&
+      azapi_resource.gateway_connection["ai-gateway"].body.properties.metadata.deploymentInPath == "false" &&
+      azapi_resource.gateway_connection["ai-gateway"].body.properties.metadata.inferenceAPIVersion == "v1" &&
+      toset([for model in jsondecode(azapi_resource.gateway_connection["ai-gateway"].body.properties.metadata.models) : model.name]) == toset(["fast-chat", "advanced-chat"]) &&
+      !contains(keys(azapi_resource.gateway_connection["ai-gateway"].body.properties), "credentials")
+    )
+    error_message = "The model connection must use the project identity, custom gateway audience and static approved model without keys or direct model access."
   }
 }
 

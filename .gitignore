@@ -22,6 +22,7 @@ docs/.obsidian/cache
 
 # Local Azure CLI/azd configuration and credentials
 /.azure/
+/infra/readiness*.json
 
 # Terraform: keep .terraform.lock.hcl, never commit state, plans or variable values
 .terraform/

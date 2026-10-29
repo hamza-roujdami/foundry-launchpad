@@ -15,6 +15,11 @@ module "ai_use_case" {
   engineer_group_ids          = var.engineer_group_ids
   enable_agent_infrastructure = var.enable_agent_infrastructure
   use_case_name               = each.key
+  gateway = {
+    url      = "${module.ai_hub_services.gateway_url}/v1"
+    audience = "api://${azuread_application.gateway.client_id}"
+    models   = { for alias, model in var.models : alias => model if alias != "embeddings" }
+  }
   registry = {
     id           = azurerm_container_registry.ai_spokes.id
     name         = azurerm_container_registry.ai_spokes.name

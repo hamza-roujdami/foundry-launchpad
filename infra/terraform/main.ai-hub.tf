@@ -22,7 +22,8 @@ module "ai_hub_services" {
   apim_sku_name                        = "StandardV2_1"
   gateway_public_access                = false
   tokens_per_minute                    = var.tokens_per_minute
-  model                                = var.model
+  models                               = var.models
+  embedding_requests_per_minute        = var.embedding_requests_per_minute
   deploy_content_safety                = true
   tenant_id                            = var.tenant_id
   gateway_client_id                    = azuread_application.gateway.client_id

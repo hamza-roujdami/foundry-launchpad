@@ -1,4 +1,4 @@
-<!-- Policy of the gateway API (Responses API and chat completions). Rendered by modules/hub with templatefile(). -->
+<!-- Rendered by ai-hub-services; all callers share this three-alias access contract. -->
 <policies>
   <inbound>
     <base />
@@ -27,6 +27,59 @@
         if (jwt.Claims.TryGetValue(&quot;appid&quot;, out v) &amp;&amp; v.Length > 0) { return v[0]; }
         return jwt.Subject;
     }" />
+    <choose>
+      <when condition="@(context.Operation.Id == &quot;responses-create&quot; || context.Operation.Id == &quot;chat-completions-create&quot; || context.Operation.Id == &quot;embeddings-create&quot;)">
+        <set-variable name="modelValidation" value="@{
+            try
+            {
+                var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
+                var model = body[&quot;model&quot;];
+                if (model == null || model.Type != JTokenType.String || string.IsNullOrWhiteSpace((string)model)) { return &quot;invalid&quot;; }
+                var alias = (string)model;
+                if (alias != &quot;fast-chat&quot; &amp;&amp; alias != &quot;advanced-chat&quot; &amp;&amp; alias != &quot;embeddings&quot;) { return &quot;denied&quot;; }
+                if ((context.Operation.Id == &quot;embeddings-create&quot;) != (alias == &quot;embeddings&quot;)) { return &quot;wrong-operation&quot;; }
+                return &quot;allowed&quot;;
+            }
+            catch { return &quot;invalid&quot;; }
+        }" />
+        <choose>
+          <when condition="@((string)context.Variables[&quot;modelValidation&quot;] == &quot;invalid&quot;)">
+            <return-response>
+              <set-status code="400" reason="Bad Request" />
+              <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
+              <set-body>{"error":{"code":"invalid_model_request","message":"Supply a JSON object with a nonempty string model alias."}}</set-body>
+            </return-response>
+          </when>
+          <when condition="@((string)context.Variables[&quot;modelValidation&quot;] == &quot;denied&quot;)">
+            <return-response>
+              <set-status code="403" reason="Forbidden" />
+              <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
+              <set-body>{"error":{"code":"model_not_allowed","message":"This model is not authorized by the gateway."}}</set-body>
+            </return-response>
+          </when>
+          <when condition="@((string)context.Variables[&quot;modelValidation&quot;] == &quot;wrong-operation&quot;)">
+            <return-response>
+              <set-status code="400" reason="Bad Request" />
+              <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
+              <set-body>{"error":{"code":"model_operation_mismatch","message":"Use chat aliases for chat/Responses and embeddings for the embeddings operation."}}</set-body>
+            </return-response>
+          </when>
+        </choose>
+        <set-variable name="modelAlias" value="@((string)context.Request.Body.As&lt;JObject&gt;(preserveContent: true)[&quot;model&quot;])" />
+      </when>
+    </choose>
+    <choose>
+      <when condition="@(context.Operation.Id == &quot;chat-completions-create&quot;)">
+        <set-body>@{
+            var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
+            if (body["reasoning_effort"] == null)
+            {
+                body["reasoning_effort"] = (string)context.Variables["modelAlias"] == "fast-chat" ? "low" : "high";
+            }
+            return body.ToString(Newtonsoft.Json.Formatting.None);
+        }</set-body>
+      </when>
+    </choose>
     <!-- Responses belong to the caller that created them. Foundry sees every call as the gateway's identity, so the
          gateway records the caller in the response metadata, and checks it before any call that reads, deletes,
          cancels or continues a response. Unknown and foreign response ids get the same 404. -->
@@ -37,12 +90,13 @@
             catch { return &quot;&quot;; }
         }" />
         <set-body>@{
-            var raw = context.Request.Body.As<string>(preserveContent: true);
+            var raw = context.Request.Body.As&lt;string&gt;(preserveContent: true);
             try
             {
                 var body = JObject.Parse(raw);
                 var metadata = body["metadata"] as JObject ?? new JObject();
                 metadata["gateway_caller"] = (string)context.Variables["caller"];
+                metadata["gateway_model"] = (string)context.Variables["modelAlias"];
                 body["metadata"] = metadata;
                 return body.ToString(Newtonsoft.Json.Formatting.None);
             }
@@ -64,7 +118,12 @@
           <when condition="@{
               var stored = context.Variables.GetValueOrDefault&lt;IResponse&gt;(&quot;storedResponse&quot;);
               if (stored == null || stored.StatusCode != 200) { return true; }
-              try { return (string)stored.Body.As&lt;JObject&gt;()[&quot;metadata&quot;]?[&quot;gateway_caller&quot;] != (string)context.Variables[&quot;caller&quot;]; }
+              try
+              {
+                  var body = stored.Body.As&lt;JObject&gt;(preserveContent: true);
+                  return (string)body[&quot;metadata&quot;]?[&quot;gateway_caller&quot;] != (string)context.Variables[&quot;caller&quot;]
+                      || ((string)body[&quot;metadata&quot;]?[&quot;gateway_model&quot;] != &quot;fast-chat&quot; &amp;&amp; (string)body[&quot;metadata&quot;]?[&quot;gateway_model&quot;] != &quot;advanced-chat&quot;);
+              }
               catch { return true; }
           }">
             <return-response>
@@ -97,13 +156,25 @@
     <authentication-managed-identity resource="https://cognitiveservices.azure.com" />
 %{ if tokens_per_minute > 0 ~}
     <!-- Token limit per caller -->
-    <llm-token-limit counter-key="@((string)context.Variables[&quot;caller&quot;])" tokens-per-minute="${tokens_per_minute}" estimate-prompt-tokens="false" remaining-tokens-header-name="x-remaining-tokens" retry-after-header-name="Retry-After" />
+    <choose>
+      <when condition="@(context.Operation.Id != &quot;embeddings-create&quot;)">
+        <llm-token-limit counter-key="@((string)context.Variables[&quot;caller&quot;])" tokens-per-minute="${tokens_per_minute}" estimate-prompt-tokens="false" remaining-tokens-header-name="x-remaining-tokens" retry-after-header-name="Retry-After" />
+      </when>
+    </choose>
 %{ endif ~}
     <!-- Token usage per caller, to Application Insights -->
-    <llm-emit-token-metric namespace="llm-gateway">
-      <dimension name="Caller" value="@((string)context.Variables[&quot;caller&quot;])" />
-      <dimension name="API ID" />
-    </llm-emit-token-metric>
+    <choose>
+      <when condition="@(context.Operation.Id == &quot;embeddings-create&quot;)">
+        <rate-limit-by-key calls="${embedding_requests_per_minute}" renewal-period="60" counter-key="@(&quot;embeddings:&quot; + (string)context.Variables[&quot;caller&quot;])" remaining-calls-header-name="x-remaining-embedding-requests" />
+      </when>
+      <otherwise>
+        <llm-emit-token-metric namespace="llm-gateway">
+          <dimension name="Caller" value="@((string)context.Variables[&quot;caller&quot;])" />
+          <dimension name="Model" value="@(context.Variables.GetValueOrDefault&lt;string&gt;(&quot;modelAlias&quot;, &quot;stored-response&quot;))" />
+          <dimension name="API ID" />
+        </llm-emit-token-metric>
+      </otherwise>
+    </choose>
   </inbound>
   <backend>
     <!-- Retry throttling (429) and short outages (503); stream responses without buffering -->
@@ -113,6 +184,31 @@
   </backend>
   <outbound>
     <base />
+    <choose>
+      <when condition="@(context.Operation.Id == &quot;embeddings-create&quot; &amp;&amp; context.Response.StatusCode == 200)">
+        <set-variable name="embeddingTokens" value="@{
+            try
+            {
+                var tokens = context.Response.Body.As&lt;JObject&gt;(preserveContent: true)[&quot;usage&quot;]?[&quot;total_tokens&quot;];
+                if (tokens == null || tokens.Type != JTokenType.Integer) { return -1.0; }
+                return (double)tokens;
+            }
+            catch { return -1.0; }
+        }" />
+        <choose>
+          <when condition="@((double)context.Variables[&quot;embeddingTokens&quot;] &gt;= 0)">
+            <emit-metric name="EmbeddingTokens" namespace="llm-gateway" value="@((double)context.Variables[&quot;embeddingTokens&quot;])">
+              <dimension name="Caller" value="@((string)context.Variables[&quot;caller&quot;])" />
+              <dimension name="Model" value="embeddings" />
+              <dimension name="API ID" />
+            </emit-metric>
+          </when>
+          <otherwise>
+            <trace source="embedding-usage" severity="error"><message>Successful embedding response has no valid token usage; cost attribution is incomplete.</message></trace>
+          </otherwise>
+        </choose>
+      </when>
+    </choose>
   </outbound>
   <on-error>
     <base />

@@ -10,10 +10,17 @@ use_case_subnet_slots      = { ai-app-01 = 1, ai-app-02 = 2 }
 engineer_group_ids          = []
 enable_agent_infrastructure = true
 
-# No app, agent definition, public ingress or model invocation is deployed.
-model = {
-  name     = "gpt-6-sol"
-  version  = "2026-09-22"
-  sku_name = "DataZoneStandard"
-  capacity = 15
+# Illustrative amounts only; approve contacts, billing currency, amounts and deployment month.
+operations = {
+  email             = "platform-team@example.com"
+  budget_start_date = "2026-10-01T00:00:00Z"
+  monthly_budgets   = { hub_infra = 100, hub_services = 1000, spokes_infra = 150, per_app = 200 }
 }
+
+# No app, agent definition, public ingress or model invocation is deployed.
+models = {
+  fast-chat     = { name = "gpt-6.1-sol", version = "2026-09-29", sku_name = "DataZoneStandard", capacity = 10 }
+  advanced-chat = { name = "gpt-6.1-terra", version = "2026-10-26", sku_name = "DataZoneStandard", capacity = 10 }
+  embeddings    = { name = "text-embedding-3-large", version = "1", sku_name = "DataZoneStandard", capacity = 10 }
+}
+embedding_requests_per_minute = 60

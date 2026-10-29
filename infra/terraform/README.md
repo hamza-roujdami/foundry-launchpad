@@ -29,9 +29,11 @@ infra/terraform/
   main.connectivity.tf          # Cross-subscription peering and DNS links
   main.identity.tf              # Gateway Entra application and caller roles
   main.private-monitoring.tf    # Shared private monitoring access
+  main.operations.tf           # RG budgets and gateway alerts
   providers.tf                 # Root-only provider configuration
   versions.tf                  # Terraform and provider constraints
   variables.tf                 # Typed, validated root inputs
+  variables.operations.tf      # Required budget/contact inputs
   outputs.tf                   # Consumer outputs and verification contract
   modules/
     ai-hub-services/            # APIM, model hosting, Content Safety and telemetry
@@ -71,12 +73,14 @@ belong only in ignored local configuration or `TF_VAR_` environment variables.
 | `location`, `region_code` | Approved region and short naming suffix; defaults `centralus`, `cus` |
 | `deployment_name` | Stable naming seed; changing it replaces named resources |
 | `publisher_email` | Real APIM contact |
+| `operations` | Required operational email, initial budget start date and four monthly amounts: hub_infra, hub_services, spokes_infra, per_app |
 | `use_cases` | Use-case names; defaults ai-app-01 and ai-app-02 |
 | `use_case_subnet_slots` | Unique, stable /23 slots; defaults 1 and 2. Never renumber existing slots |
 | `engineer_group_ids` | Existing Entra groups for project-scoped Foundry User access |
 | `enable_agent_infrastructure` | Private BYO connections/capability hosts, not agent definitions |
-| `model` | Name, version, SKU and capacity; no PTU reservation is purchased |
+| `models` | Exactly fast-chat, advanced-chat and embeddings, each with actual model name, version, SKU and capacity; no PTU reservation |
 | `tokens_per_minute` | Per-caller gateway allowance, not backend quota |
+| `embedding_requests_per_minute` | Separate per-caller embedding request limit; default 60, not a token cap |
 | `ai_hub_address_space`, `ai_spokes_address_space` | Distinct IPv4 /16 ranges |
 | `existing_networks` | Optional existing VNet/subnet/DNS references instead of creating networks |
 | `tags` | Resource tags |
@@ -110,10 +114,24 @@ Existing platform firewalls and routing remain platform-owned.
 Coordinate AMPLS/DNS with the platform owner. Reusing an existing ACR, monitoring
 workspace or AMPLS is not implemented.
 
-Foundry-to-APIM model connections and runtime assets still need a later
-application phase. Built-in Foundry gateway onboarding requires same-subscription
-APIM; it does not automatically wire this cross-subscription design. Private
-endpoints do not guarantee egress isolation or processing residency.
+With agent infrastructure enabled, every project gets an `ai-gateway`
+`ApiManagement` connection to the hub's `/foundry/v1` endpoint. It uses
+`ProjectManagedIdentity`, the custom gateway audience, and a serialized static
+approved chat-model list. Agents select `ai-gateway/fast-chat` or
+`ai-gateway/advanced-chat`; embeddings are called by application/indexing code
+through APIM, not offered as an agent chat model. Alias names are the actual hub
+deployment names; APIM rejects other aliases and mismatched operations.
+The preview connection uses the official sample contract with AzAPI schema
+validation disabled only for that resource because the embedded schema omits
+this authentication type. No model key or second APIM is created.
+Runtime assets and [live acceptance checks](../README.md#private-access-and-agent-smoke-test)
+remain separate. Private endpoints do not guarantee egress isolation or residency.
+
+Use the three-model catalog in [the root README](../../README.md#model-access-pattern).
+This replaces the previous singular `model` input: update ignored local inputs
+to `models` rather than keeping an unused legacy value. A deployment that already
+has model resources must review the replacement/deletion plan before applying;
+alias deployments do not automatically adopt old deployment names.
 
 ## Validate and deploy
 
@@ -123,7 +141,8 @@ An authorized operator must register Network, Web, ApiManagement,
 CognitiveServices, Insights, OperationalInsights and ManagedIdentity in the hub;
 Network, App, CognitiveServices, ContainerRegistry, Storage, Search, DocumentDB,
 KeyVault, Insights, OperationalInsights, ManagedIdentity, ContainerService and
-MachineLearningServices in spokes. Check regional availability and actual quota;
+MachineLearningServices in spokes. Register Consumption in both subscriptions
+for resource-group budgets. Check regional availability and actual quota;
 an advertised offering is not an allocation guarantee.
 
 ```bash
@@ -147,7 +166,7 @@ review. State and saved plans are sensitive and must stay out of Git.
 
 `test.sh` calls the read-only `verify.sh`: tenant/subscriptions, groups, private
 access, endpoint count/approval, peering, DNS links, AMPLS, private telemetry,
-model provisioning and project capability hosts. It never reads keys or invokes
+all three model deployments and project capability hosts. It never reads keys or invokes
 models. Failures are nonzero. DNS checks target only the supplied zone IDs,
 including zones in different resource groups or subscriptions. New-network mode
 checks bilateral peering and links to both VNets. Existing-network mode explicitly
@@ -156,7 +175,14 @@ authorized private runner.
 
 These are control-plane checks, not packet-flow tests. Registry pulls, private
 DNS, authenticated gateway requests and actual log delivery require an authorized
-private runner and separately approved runtime tests.
+private runner and separately approved runtime tests. Export the `readiness`
+output for the shared [preflight and synthetic agent smoke test](../README.md#private-access-and-agent-smoke-test).
+
+Budgets use `operations.budget_start_date`, the first day of the initial deployment
+month, retained on later applies. Every RG has 80%/100% notifications. Gateway
+alerts and the action group live in hub services. See the shared
+[operations guide](../README.md#basic-operational-controls) for thresholds and
+cost coverage limitations.
 
 The verifier's offline regression tests use only the Python standard library:
 

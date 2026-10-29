@@ -38,14 +38,23 @@ variable "tokens_per_minute" {
   type        = number
 }
 
-variable "model" {
-  description = "The model to deploy."
-  type = object({
+variable "models" {
+  description = "The three governed alias deployments."
+  type = map(object({
     name     = string
     version  = string
     sku_name = string
     capacity = number
-  })
+  }))
+  validation {
+    condition     = toset(keys(var.models)) == toset(["fast-chat", "advanced-chat", "embeddings"])
+    error_message = "Supply exactly fast-chat, advanced-chat and embeddings."
+  }
+}
+
+variable "embedding_requests_per_minute" {
+  description = "Embedding requests per verified caller per minute."
+  type        = number
 }
 
 variable "deploy_content_safety" {

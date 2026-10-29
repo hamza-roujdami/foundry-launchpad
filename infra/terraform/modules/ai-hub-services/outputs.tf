@@ -9,6 +9,11 @@ output "apim_name" {
   value       = azurerm_api_management.this.name
 }
 
+output "apim_id" {
+  description = "Gateway resource ID for scoped monitoring and verification."
+  value       = azurerm_api_management.this.id
+}
+
 output "foundry_account_name" {
   description = "Foundry account containing model deployments."
   value       = module.foundry.name
@@ -30,7 +35,7 @@ output "private_service_ids" {
   ], [for account in azurerm_cognitive_account.content_safety : { id = account.id, api_version = "2025-06-01" }])
 }
 
-output "model_deployment_id" {
-  description = "ARM model deployment ID, not an inference endpoint."
-  value       = "${module.foundry.id}/deployments/${var.model.name}"
+output "model_deployment_ids" {
+  description = "ARM deployment IDs keyed by governed alias, not inference endpoints."
+  value       = { for alias in keys(var.models) : alias => "${module.foundry.id}/deployments/${alias}" }
 }

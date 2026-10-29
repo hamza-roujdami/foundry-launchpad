@@ -12,6 +12,7 @@ deployment; do not manage the same resources with both tools.
 - `modules/ai-hub-services.bicep`: gateway, model hosting, safety and monitoring.
 - `modules/ai-spokes-services.bicep`: shared Foundry, registry and monitoring.
 - `modules/ai-use-case.bicep`: dedicated application infrastructure.
+- `modules/budget.bicep`, `modules/gateway-alerts.bicep`: resource-group budgets and gateway alerts.
 - Other modules handle resource-group scopes, networking, project bindings and
   ordered private access.
 - `policies/`: versioned gateway policy.
@@ -43,6 +44,8 @@ endpoints, 15 DNS zones, 4 workspaces and 4 Application Insights components**.
 The third Cognitive Services account is Content Safety. Two ordered APIM PUTs
 manage **one** service. ARM nested deployments are orchestration resources;
 their counts are not comparable to Terraform's managed-resource count.
+The default also creates five resource-group budgets, one operational action
+group and two gateway metric alerts.
 
 ### Security and policy parity
 
@@ -68,6 +71,16 @@ their counts are not comparable to Terraform's managed-resource count.
 - Agent infrastructure adds creation-time network injection, AAD BYO
   Storage/Search/Cosmos connections and serial project capability hosts.
   Foundry account/project writes are serialized where required.
+- Each enabled project gets an `ai-gateway` model connection using
+  `ProjectManagedIdentity`, audience `api://<gateway-client-id>` and the static
+  approved chat-model list. It targets the central APIM `/foundry/v1` route across
+  subscriptions. Agents select `ai-gateway/fast-chat` or
+  `ai-gateway/advanced-chat`; no key is read. Application embeddings use APIM's
+  `/foundry/v1/embeddings` operation and the `embeddings` alias.
+- APIM enforces the same three-alias model/operation allowlist for both projects,
+  retaining caller-scoped response ownership. Chat token limits and prompt safety
+  are separate from the embedding request limit (default 60/minute per caller)
+  and successful-response `EmbeddingTokens` metric.
 - All four monitoring pairs are attached to a PrivateOnly AMPLS. APIM enables
   token metrics but logs zero request/response body bytes and no client IP.
   ACA's log-shipping integration reads a Log Analytics workspace key internally;
@@ -88,10 +101,11 @@ their counts are not comparable to Terraform's managed-resource count.
 3. This implementation targets Azure public cloud. Foundry project endpoints
    and gateway Entra authorities use public-cloud domains. No alternate-cloud
    certification or region/model substitution is implied.
-4. Two narrowly scoped `BCP037` suppressions preserve the same preview REST
+4. Narrowly scoped schema suppressions preserve the documented preview REST
    contracts as Terraform: backend `credentials.managedIdentity` and project
-   `capabilityHostKind: Agents`. Bicep 0.46.1's bundled type catalog omits these
-   fields. The remaining resources/properties are typed; there is no `any()`,
+   `capabilityHostKind: Agents`, plus the official APIM connection sample's
+   `ProjectManagedIdentity` authentication and `audience`. Bicep 0.46.1's bundled
+   type catalog omits these contracts. The remaining resources/properties are typed; there is no `any()`,
    generated template blob, deployment script or automatic Graph extension.
    These preview service contracts still require live deployment verification.
 
@@ -104,13 +118,18 @@ subscriptions, resource-scoped role-assignment write permissions, subnet joins,
 Private Link approval and private DNS zone-group/link permissions.
 Register the required providers in both subscriptions through the platform
 process, including Microsoft.Web for APIM delegation and Microsoft.App for ACA.
+Microsoft.Consumption must be registered in both subscriptions for RG budgets.
 No provider registration is performed by these templates.
 
-The default model request is **`gpt-6-sol`,
-`2026-09-22`, `DataZoneStandard`, capacity `15`**. Confirm its availability,
-capacity units, quota and region with the service before deployment; compilation
+The `models` input requests **`fast-chat` -> `gpt-6.1-sol` (`2026-09-29`)**,
+**`advanced-chat` -> `gpt-6.1-terra` (`2026-10-26`)**, and
+**`embeddings` -> `text-embedding-3-large` (`1`)**, each with
+`DataZoneStandard` capacity `10`. The deployment names are the aliases.
+Confirm availability, capacity units, quota and region before deployment; compilation
 does not validate the catalog or guarantee allocation. No reservation is bought
 and no region is silently inferred from the model name.
+This replaces the former singular `model` parameter; update local parameter
+files and review existing model deployments before redeploying.
 
 Supply identifiers/contact through environment variables used by
 `main.bicepparam`, never checked-in customer values:
@@ -123,7 +142,18 @@ GATEWAY_CLIENT_ID
 GATEWAY_SERVICE_PRINCIPAL_OBJECT_ID
 GATEWAY_APP_ROLE_ID
 APIM_PUBLISHER_EMAIL
+OPERATIONS_EMAIL
+BUDGET_START_DATE
+BUDGET_HUB_INFRA
+BUDGET_HUB_SERVICES
+BUDGET_SPOKES_INFRA
+BUDGET_PER_APP
 ```
+
+Budget amounts must be approved positive integers in billing currency. Set the
+start date to the first day of the initial deployment month
+(`YYYY-MM-01T00:00:00Z`) and retain it on redeploy. Budgets alert at 80%/100%;
+they are not spending caps. See [operational controls](../README.md#basic-operational-controls).
 
 ### Entra bootstrap and authorization — explicit, never automatic
 
@@ -235,11 +265,12 @@ this by weakening RBAC, network rules or policy.
 
 Inspect deployment outputs: `gatewayUrl`, `gatewayPublicNetworkAccess`,
 `projects`, `runtimeIdentities`, `backingServices`, `registry`,
-`containerAppEnvironmentIds` and `gatewayAuthorization`.
+`containerAppEnvironmentIds`, `gatewayAuthorization` and `readiness`.
 After authorization, use an approved private runner to verify DNS/peering,
 telemetry ingestion, gateway token limits/safety, response ownership and denial
 of public/direct-model access. Identity propagation or preview capability-host
 provisioning may require a reviewed retry; no automatic role broadening occurs.
+Export `readiness` for the shared [private preflight and opt-in agent smoke test](../README.md#private-access-and-agent-smoke-test).
 
 ## Existing network mode
 

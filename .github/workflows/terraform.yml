@@ -4,11 +4,15 @@ on:
   pull_request:
     paths:
       - "infra/terraform/**"
+      - "infra/scripts/**"
+      - "infra/tests/**"
       - ".github/workflows/terraform.yml"
   push:
     branches: [main]
     paths:
       - "infra/terraform/**"
+      - "infra/scripts/**"
+      - "infra/tests/**"
       - ".github/workflows/terraform.yml"
   workflow_dispatch:
 
@@ -23,6 +27,9 @@ jobs:
         working-directory: infra/terraform
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.15.8"
@@ -32,3 +39,4 @@ jobs:
       - run: terraform test -no-color
       - run: bash -n test.sh verify.sh
       - run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - run: python3 -m unittest discover -s ../tests -p 'test_*.py'
