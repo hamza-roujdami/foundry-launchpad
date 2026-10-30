@@ -30,6 +30,47 @@ run "hub_network_layout" {
   }
 }
 
+run "endpoint_capacity_guard" {
+  command = plan
+  module {
+    source = "./modules/network"
+  }
+  variables {
+    name                  = "test"
+    resource_group_name   = "test"
+    location              = "centralus"
+    tags                  = {}
+    address_space         = "10.41.0.0/16"
+    network_role          = "ai_spokes"
+    existing_dns_zone_ids = {}
+    use_case_subnet_slots = { for index in range(11) : "app-${index}" => index + 1 }
+  }
+  expect_failures = [var.use_case_subnet_slots]
+}
+
+run "ten_use_cases_fit_endpoint_capacity" {
+  command = plan
+  module {
+    source = "./modules/network"
+  }
+  variables {
+    name                  = "test"
+    resource_group_name   = "test"
+    location              = "centralus"
+    tags                  = {}
+    address_space         = "10.41.0.0/16"
+    network_role          = "ai_spokes"
+    existing_dns_zone_ids = {}
+    use_case_subnet_slots = { for index in range(10) : "app-${index}" => index + 1 }
+  }
+  assert {
+    condition = (
+      one(azurerm_subnet.this["private-endpoints"].address_prefixes) == "10.41.0.0/26" &&
+      5 + 5 * length(var.use_case_subnet_slots) <= pow(2, 32 - 26) - 5 - 4
+    )
+    error_message = "Allow five shared private IPs and five per app, with four spare addresses after Azure's five reservations."
+  }
+}
 run "per_use_case_aca_subnets" {
   command = plan
   module {

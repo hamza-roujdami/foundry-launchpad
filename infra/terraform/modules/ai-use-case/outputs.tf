@@ -50,7 +50,7 @@ output "private_service_ids" {
     { id = azurerm_search_service.this.id, api_version = "2025-05-01" },
     { id = azurerm_cosmosdb_account.this.id, api_version = "2024-08-15" },
     { id = azurerm_key_vault.this.id, api_version = "2023-07-01" },
-    { id = azurerm_container_app_environment.this.id, api_version = "2024-03-01" },
+    { id = azurerm_container_app_environment.this.id, api_version = "2025-07-01" },
   ]
 }
 

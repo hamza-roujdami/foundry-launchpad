@@ -26,13 +26,13 @@ The default is Central US, two existing subscriptions in one Entra tenant, and
 
 | Subscription | Resource group | Owned resources |
 |---|---|---|
-| Hub | `rg-ai-hub-infra-nonprod-cus` | Hub VNet, NSGs, APIM delegated subnet, private endpoints, 13 shared DNS zones linked to both VNets, AMPLS |
-| Hub | `rg-ai-hub-services-nonprod-cus` | Standard v2 APIM, model-only Foundry S0, Content Safety S0, gateway policy, monitoring |
-| Spokes | `rg-ai-spokes-infra-nonprod-cus` | Spokes VNet, NSGs, delegated agent/ACA subnets, Premium ACR, shared Foundry S0 with two projects, shared monitoring, private endpoints and ACA DNS |
-| Spokes | `rg-ai-app-01-dev-cus` | Internal ACA environment, runtime identity, monitoring, Storage LRS, Search Basic, Cosmos serverless and Key Vault |
-| Spokes | `rg-ai-app-02-dev-cus` | The same dedicated application infrastructure for the second use case |
+| ai-hub | `rg-ai-hub-infra-nonprod-cus` | ai-hub VNet, NSGs, APIM delegated subnet, private endpoints, 13 shared DNS zones linked to both VNets, AMPLS |
+| ai-hub | `rg-ai-hub-services-nonprod-cus` | Standard v2 APIM, model-only Foundry S0, Content Safety S0, gateway policy, monitoring |
+| ai-spoke | `rg-ai-spokes-infra-nonprod-cus` | ai-spoke VNet, NSGs, delegated agent/ACA subnets, Premium ACR, shared Foundry S0 with two projects, shared monitoring, private endpoints and ACA DNS |
+| ai-spoke | `rg-ai-app-01-dev-cus` | Internal ACA environment, runtime identity, monitoring, Storage LRS, Search Basic, Cosmos serverless and Key Vault |
+| ai-spoke | `rg-ai-app-02-dev-cus` | The same dedicated application infrastructure for the second use case |
 
-Hub infrastructure/services remain platform-owned. Shared spokes infrastructure
+ai-hub infrastructure/services remain platform-owned. Shared ai-spoke infrastructure
 and project accounts stay outside application resource groups; engineers own
 their application groups. Private endpoints stay in infrastructure groups.
 No application, image, agent definition, tenant, subscription or landing zone is
@@ -84,6 +84,8 @@ group and two gateway metric alerts.
   retaining caller-scoped response ownership. Chat token limits and prompt safety
   are separate from the embedding request limit (default 60/minute per caller)
   and successful-response `EmbeddingTokens` metric.
+  Inference token limits do not block owned response retrieval, cancellation
+  or deletion.
 - All four monitoring pairs are attached to a PrivateOnly AMPLS. APIM enables
   token metrics but logs zero request/response body bytes and no client IP.
   ACA's log-shipping integration reads a Log Analytics workspace key internally;
@@ -328,7 +330,10 @@ delegated to Microsoft.App/environments; the agent subnet uses the same service
 delegation. Do not change creation-time Foundry network injection in place.
 
 For new-network mode, supply distinct, non-overlapping IPv4 `/16` prefixes and
-unique stable subnet slots `1..31`. Use-case names must match Terraform's
+unique stable subnet slots `1..31`, with at most 10 use cases. The endpoint `/26`
+has 59 Azure-usable IPs; five shared plus five per app leave four spare at that
+bound. This is a capacity guard, not proof of operation at scale.
+Use-case names must match Terraform's
 lowercase naming restrictions; duplicate names/slots and overlapping address
 spaces are invalid. Review these cross-field constraints before what-if;
 ARM parameter decorators do not enforce Terraform's complete regex/set logic.

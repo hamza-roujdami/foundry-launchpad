@@ -3,6 +3,8 @@ name: Bicep
 on:
   pull_request:
     paths:
+      - "README.md"
+      - "docs/**"
       - "infra/bicep/**"
       - "infra/scripts/**"
       - "infra/tests/**"
@@ -10,6 +12,8 @@ on:
   push:
     branches: [main]
     paths:
+      - "README.md"
+      - "docs/**"
       - "infra/bicep/**"
       - "infra/scripts/**"
       - "infra/tests/**"

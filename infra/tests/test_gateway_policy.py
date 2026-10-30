@@ -26,7 +26,7 @@ class GatewayPolicyTests(unittest.TestCase):
         self.assertEqual(limit.get("calls"), "__EMBEDDING_REQUESTS_PER_MINUTE__")
         self.assertIn("embeddings:", limit.get("counter-key"))
         token_limit = inbound.find(".//llm-token-limit")
-        self.assertIn('!= "embeddings-create"', parents[token_limit].get("condition"))
+        self.assertEqual(parents[token_limit].get("condition"), '@(context.Operation.Id == "responses-create" || context.Operation.Id == "chat-completions-create")')
         safety = inbound.find(".//llm-content-safety")
         self.assertNotIn("embeddings", parents[safety].get("condition"))
         self.assertEqual(safety.get("shield-prompt"), "true")
@@ -67,6 +67,10 @@ class GatewayPolicyTests(unittest.TestCase):
             element.text.strip()[1:] for element in self.policy.findall(".//set-body")
             if "reasoning_effort" in (element.text or "")
         )
+        limiter_condition = next(
+            element.get("condition")[1:] for element in self.policy.findall(".//when")
+            if element.find("llm-token-limit") is not None
+        )
         program = '''
 using System;
 using System.Collections.Generic;
@@ -105,6 +109,11 @@ class Program {
         Func<double> usage = () => __TOKENS__;
         Func<bool> foreign = () => __OWNERSHIP__;
         Func<string> defaults = () => __CHAT__;
+        Func<bool> limitInference = () => __LIMITER__;
+        foreach (var operation in new[] {"responses-create", "chat-completions-create", "responses-get", "responses-delete", "responses-cancel", "responses-input-items", "embeddings-create"}) {
+            context.Operation.Id = operation;
+            Check(limitInference() == (operation == "responses-create" || operation == "chat-completions-create"), "Only inference consumes the chat token limit");
+        }
         foreach (var operation in new[] {"chat-completions-create", "responses-create", "embeddings-create"}) {
             context.Operation.Id = operation;
             foreach (var alias in new[] {"fast-chat", "advanced-chat", "embeddings"}) {
@@ -156,7 +165,7 @@ class Program {
 }
 '''
         program = program.replace("using System;", "using System;\nusing System.Linq;")
-        program = program.replace("__MODEL__", model).replace("__TOKENS__", tokens).replace("__OWNERSHIP__", ownership).replace("__CHAT__", chat)
+        program = program.replace("__MODEL__", model).replace("__TOKENS__", tokens).replace("__OWNERSHIP__", ownership).replace("__CHAT__", chat).replace("__LIMITER__", limiter_condition)
         project = """<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup>
   <ItemGroup><Reference Include="Newtonsoft.Json"><HintPath>$(MSBuildSDKsPath)/../Newtonsoft.Json.dll</HintPath></Reference></ItemGroup>

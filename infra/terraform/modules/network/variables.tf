@@ -42,4 +42,8 @@ variable "use_case_subnet_slots" {
   description = "Stable ACA /23 slot per use case in the AI spokes network."
   type        = map(number)
   default     = {}
+  validation {
+    condition     = length(var.use_case_subnet_slots) <= 10
+    error_message = "The reference endpoint subnet supports at most 10 use-case slots."
+  }
 }

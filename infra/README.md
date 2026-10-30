@@ -32,6 +32,20 @@ Project access does not automatically grant app deployment, registry push or
 direct local gateway access. Keep those permissions scoped to the required
 resources and use an approved deployment/runtime identity.
 
+## Scope boundary
+
+This repository supplies workload IaC, gateway policies, basic operational
+controls and validation scripts. It does **not** implement Git/org setup,
+application CI/CD, developer access/connectivity, private runner provisioning,
+Terraform backend bootstrap or platform landing-zone design.
+The GitHub workflows only validate source changes; they never deploy.
+
+Before starting, the platform team supplies the tenant/subscriptions, provider
+registrations, deployment permissions, network integration, real notification
+contact and approved budget amounts. Choose one implementation:
+Terraform also needs a protected state backend and Graph permissions; Bicep
+needs the documented explicit gateway Entra preparation and assignment steps.
+
 ## Private access and agent smoke test
 
 Use an existing platform-managed private runner or workstation with approved
@@ -124,7 +138,7 @@ The gateway leg uses `/foundry/v1/chat/completions` with `api-version=v1`. A bar
 model name is rejected by the test. This path does not assume BYOM support for
 the gateway's separate Responses backend API.
 
-After a successful run, use the printed UTC time to inspect the hub's
+After a successful run, use the printed UTC time to inspect the ai-hub's
 Application Insights `requests` and `dependencies`: confirm the
 `/foundry/v1/chat/completions` request and model dependency, plus caller token
 metrics and the `EmbeddingTokens` custom metric for the embeddings test. Query
@@ -133,6 +147,28 @@ arrival is asynchronous; missing telemetry is a remaining acceptance failure,
 not proof that monitoring works. The smoke does **not** certify image pulls,
 all backing-service data operations, safety attacks or token-limit saturation.
 Validate those with the eventual app, without weakening controls.
+
+### Caller/model usage
+
+Query `AppMetrics` in the ai-hub Log Analytics workspace from approved private
+connectivity. Replace the time range with your test window. This reads aggregate
+token counts, not prompts, responses or secret values:
+
+```kusto
+AppMetrics
+| where TimeGenerated > ago(1h)
+| where Name in ("Total Tokens", "EmbeddingTokens")
+| extend Caller = tostring(Properties.Caller), Model = tostring(Properties.Model)
+| summarize Tokens = sum(Sum) by Caller, Model, Name
+| order by Caller asc, Model asc
+```
+
+`Caller` is the verified token's client ID. Map it to the exported runtime
+identity or the Foundry project's service principal; do not trust a request
+header for attribution. Runtime and project identities have separate counters.
+The log dimensions are distinct from the metric store's optional dimensional
+settings. When querying the metric store REST API, specify
+`metricnamespace=llm-gateway` explicitly. Ingestion can take several minutes.
 
 Python regression tests use the standard library. The policy-expression test
 also requires the .NET 10 SDK and uses its bundled Newtonsoft.Json assembly:
@@ -148,27 +184,35 @@ python3 -m unittest discover -s infra/tests -p 'test_*.py'
 
 Both implementations require an `operations` input: notification email, stable
 budget start date (the first day of the initial deployment month), and monthly
-amounts for hub infrastructure, hub services, spokes infrastructure and each app.
+amounts for ai-hub infrastructure, ai-hub services, ai-spoke infrastructure and each app.
 Amounts use the subscription's billing currency. Example numbers are illustrative,
 not approval to spend. Retain the start date on later deployments.
 
 - Five resource-group budgets notify at 80% and 100% of actual monthly cost.
   They do not automatically stop services and cost data is delayed.
-- One hub action group receives gateway alerts: at least five 5xx responses or
+- One ai-hub action group receives gateway alerts: at least five 5xx responses or
   ten 429 responses in five minutes, evaluated every minute. A 429 can be an
   intentional caller limit, backend quota exhaustion or capacity pressure.
 - Confirm notification delivery through Azure Monitor's action-group test.
   Review caller metrics and backend capacity before changing token allowances.
+  An enabled receiver is not proof of delivery: complete any email-verification
+  prompt/OTP in the portal and confirm the test email arrives. If Azure reports
+  "no valid receivers", inspect receiver eligibility/verification rather than
+  disabling alerts or silently substituting a contact. Budgets notify independently;
+  a sample budget notification does not prove a real cost threshold was crossed.
 - Budgets cover their resource groups, not ACA's separate service-managed groups
   or existing platform costs. Include those in the platform's cost review.
 - Deployment permissions must include resource-group budget writes and monitor
   action-group/metric-alert writes; register Microsoft.Consumption through the
   platform process. Do not grant subscription roles to application identities.
 
-The default layout remains two trusted non-prod use cases. Before substantial
-growth, review endpoint subnet capacity: the `/26` is not sized for the maximum
-16 accepted use cases. Separate engineer-group membership and independent
-per-project token allowances are also separate scaling decisions.
+The default layout remains two trusted non-prod use cases. Both implementations
+cap the reference profile at 10 use cases. The `/26` endpoint subnet has 59 usable
+IPs: allow five shared IPs (Foundry and ACR), five per app (including Cosmos's
+regional endpoint), and four spare at that bound. This is not a scale certification.
+Additional regions/services or BYO networks need a new capacity review.
+Separate engineer-group membership and independent per-project token allowances
+are separate design decisions, not existing features.
 
 ## References
 

@@ -157,7 +157,7 @@
 %{ if tokens_per_minute > 0 ~}
     <!-- Token limit per caller -->
     <choose>
-      <when condition="@(context.Operation.Id != &quot;embeddings-create&quot;)">
+      <when condition="@(context.Operation.Id == &quot;responses-create&quot; || context.Operation.Id == &quot;chat-completions-create&quot;)">
         <llm-token-limit counter-key="@((string)context.Variables[&quot;caller&quot;])" tokens-per-minute="${tokens_per_minute}" estimate-prompt-tokens="false" remaining-tokens-header-name="x-remaining-tokens" retry-after-header-name="Retry-After" />
       </when>
     </choose>

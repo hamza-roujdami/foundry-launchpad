@@ -240,6 +240,15 @@ run "invalid_model_aliases" {
   expect_failures = [var.models]
 }
 
+run "too_many_use_cases" {
+  command = plan
+  variables {
+    use_cases             = [for index in range(11) : "app-${index}"]
+    use_case_subnet_slots = { for index in range(11) : "app-${index}" => index + 1 }
+  }
+  expect_failures = [var.use_cases]
+}
+
 run "invalid_embedding_limit" {
   command = plan
   variables {

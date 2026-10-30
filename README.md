@@ -14,6 +14,23 @@ workspace with Foundry, data services and infrastructure for future apps and age
 This phase deploys infrastructure only. It does not deploy apps, agent
 definitions, container images or public endpoints for end users.
 
+## Scope
+
+**For platform engineers:** a reference workload to deploy into two existing
+Azure subscriptions in one tenant, then hand over governed projects to AI engineers.
+It is not a complete platform landing zone or a production certification.
+
+| Included | Outside this repository |
+|---|---|
+| ai-hub APIM gateway, shared models and gateway policies | Platform landing-zone design, tenant/subscription vending and enterprise Azure Policy |
+| ai-spoke Foundry projects, ACA environments and backing services | Application code, agent definitions, business data and knowledge-source integration |
+| Workload private endpoints, DNS, identities and scoped service permissions | Developer connectivity/access provisioning: VPN, Bastion, workstations, private runners and corporate-network integration |
+| Gateway metrics, basic alerts, budgets and validation tools | Git/org setup, application CI/CD, build/push pipelines and deployment-identity onboarding |
+
+The GitHub workflows here run **source validation only**. They do not set up an
+organization or deploy applications/infrastructure. Optional project-group
+bindings consume existing Entra groups; they are not a developer-onboarding system.
+
 ## What it provisions
 
 Two existing subscriptions in one corporate Entra tenant, in Central US:
@@ -99,12 +116,10 @@ receiving duplicate model deployments. Both default projects share this catalog:
 | `advanced-chat` | `gpt-6.1-terra` | `2026-10-26` | Complex chat; APIM defaults missing Chat Completions reasoning effort to `high` |
 | `embeddings` | `text-embedding-3-large` | `1` | Retrieval/indexing through `/foundry/v1/embeddings`; not an agent chat model |
 
-Each requests Data Zone Standard capacity 10 (model-specific allocation units,
-not reserved throughput). US data-zone processing is not Central-US-only
-processing. Confirm current quota, allocation, prices and model lifecycle before
-deployment. `fast-chat` is a workload label, not a latency guarantee; explicit
-caller reasoning settings are preserved. Validate Sol tool calling over the
-Foundry gateway chat-completions path before tool-using agents rely on it.
+Each requests Data Zone Standard capacity 10, not reserved throughput. Processing
+is within the US data zone, not necessarily Central US. Check model availability,
+quota, prices and lifecycle before deployment. `fast-chat` is a workload label,
+not a latency guarantee; caller reasoning settings are preserved.
 
 Agent definitions select `<project>-ai-gateway/fast-chat` or
 `<project>-ai-gateway/advanced-chat`, for example `ai-app-01-ai-gateway/fast-chat`.
@@ -118,13 +133,14 @@ token allowance is per caller, not one pooled project budget.
 
 APIM rejects unknown aliases with 403 and chat/embedding operation mismatches
 with 400 before inference. Chat and Responses share the existing caller token
-limit (default 10,000/minute), prompt checks and token metrics. Embeddings use a
+limit for inference (default 10,000/minute), prompt checks and token metrics.
+Response retrieval, cancellation and deletion are not charged to that token
+counter. Embeddings use a
 separate default 60 requests/minute per caller and emit `EmbeddingTokens` from
 successful response usage. LLM-specific token limiting and prompt safety policies
 are not applied to embeddings; request limits and budgets are not token caps.
-Existing response-ownership checks remain caller-scoped and require the
-gateway-stamped chat alias for stored Responses. Responses created before alias
-stamping are rejected rather than adopted.
+Response-ownership checks remain caller-scoped and require the gateway-stamped
+chat alias; untagged or foreign Responses are rejected.
 
 Engineer groups receive project-scoped Foundry User access. This deployment
 does not grant them model keys or direct inference roles on the ai-hub model account,
@@ -137,6 +153,15 @@ explicit per-project contract and review of effective permissions and platform
 controls.
 
 ## Architecture
+
+[![Foundry Launchpad: private ai-hub gateway and two ai-spoke projects](docs/reference-architecture.png)](docs/reference-architecture.png)
+
+The illustration is an original reference diagram, not a screenshot of a
+customer environment. [Editable SVG](docs/reference-architecture.svg) |
+[Obsidian canvas](docs/reference-architecture.canvas).
+
+<details>
+<summary>Mermaid architecture source</summary>
 
 ```mermaid
 flowchart LR
@@ -202,6 +227,8 @@ flowchart LR
     class enterprise,engineers external
 ```
 
+</details>
+
 The five resource groups are ownership boundaries, not VNets. Foundry projects
 stay under the shared account; their backing services and ACA environments are
 dedicated to each use case. Private endpoints stay in the infrastructure groups.
@@ -213,61 +240,53 @@ Foundry project has a `<project>-ai-gateway` connection; an agent must select
 directly. ACR and shared runtime monitoring belong to the ai-spoke foundation;
 each use case also has its own telemetry. Existing-network mode uses
 customer-managed routing and DNS.
-See the [editable canvas](docs/reference-architecture.canvas).
 
 ## Technical notes
 
-- **Private services:** public access is disabled on the workload services.
-  APIM uses inbound Private Link and outbound VNet integration; its subnet stays
-  in the platform subscription. ACR needs Premium and Search needs Basic or higher.
-- **Networking:** two non-overlapping VNets are peered in both directions. One
-  private DNS authority is linked to both networks. The repo creates these
-  resources by default, or accepts approved `existing_networks` inputs.
-- **Existing platform:** supplied VNets/zones retain their original ownership.
-  Existing-network mode requires the customer to supply working routing and DNS.
-  It does not automatically reuse an existing registry, logging workspace or AMPLS.
-- **Agent readiness:** `enable_agent_infrastructure=true` provisions private
-  Standard Agent Service connections, backing permissions and capability hosts.
-  No agent is created. ACA and Foundry-hosted code agents are separate runtime
-  choices; applications and images belong to a later phase.
-- **Identity:** runtime and Foundry project identities are distinct. Model calls
-  must go through APIM. Configure engineer group access and validate the selected
-  Foundry-to-gateway connection before using an agent.
-- **Foundry Control Plane:** use the portal management experience for the shared
-  account and projects; it is not an extra RG resource. The IaC creates explicit
-  project-level `ApiManagement` model connections using project managed identity,
-  the gateway's Entra audience and a static approved-model list. This differs
-  from resource-wide portal gateway onboarding. The central APIM stays in the
-  ai-hub subscription; no second gateway or model keys are needed. The connection
-  uses chat completions, not the gateway's Responses backend path.
-- **Isolation:** each use case has dedicated backing services and application
-  namespaces, separate from Foundry's internal stores. Foundry account settings,
-  quotas and runtime networking remain shared. This profile is for trusted
-  non-prod teams, not mutually untrusted tenants.
-- **Public app access:** an end-user app may be public while its backends stay
-  private. Each use case has its own ACA environment and subnet; the current profile
-  keeps them internal. Public ingress is a separate application-phase decision.
-- **Platform checks:** private developer/runner access, egress restrictions and
-  business-data residency remain explicit platform decisions. Private endpoints
-  alone do not provide them. APIM briefly permits public access during initial
-  creation; an ordered update closes it after Private Link approval.
-- **Readiness:** run the [private-access and agent smoke checks](infra/README.md#private-access-and-agent-smoke-test)
-  from approved private connectivity. Preflight does not invoke models; a
-  separate explicit flag creates and cleans up a small synthetic prompt agent.
-  Offline checks do not certify live networking or service support.
-- **Lifecycle:** review actual regional capacity and recurring charges before
-  apply. Retain protected Terraform state and use a team-approved remote backend.
-  No previous tenant's state should be reused for a new deployment.
+- **Private by default:** APIM uses inbound Private Link and outbound VNet
+  integration. Its initial bootstrap briefly enables public access; the ordered
+  endpoint/closure step must finish before use. Never reopen it on redeployment.
+- **Existing networks:** BYO mode requires platform-managed routing, DNS,
+  delegations and permissions. It does not reuse an existing registry or AMPLS.
+- **Trusted non-prod teams:** Foundry account settings, quotas and runtime
+  networking are shared. Dedicated app resources do not provide hard tenant isolation.
+- **Bounded growth:** two apps are the default and live-tested profile. Inputs
+  allow up to 10 use cases within the reference `/26` private-endpoint subnet;
+  this is an IP-capacity guard, not a tested service-scale guarantee.
+- **Foundry integration:** project-managed-identity APIM connections use chat
+  completions. They are separate from resource-wide portal gateway onboarding.
+  Some APIs use preview contracts; validate the chosen model and tools.
+- **Platform responsibilities:** private developer connectivity, egress control,
+  residency requirements, application delivery and production resilience stay
+  outside this workload. Private endpoints alone do not supply them.
+
+## Validation and limitations
+
+The default Bicep profile has been deployed and checked in Central US with
+synthetic data. Live checks covered both runtime identities, both chat aliases,
+embeddings, a simple Foundry `fast-chat` agent in each project, private image
+push/pull, Storage fixture write/read/delete, Cosmos database metadata, Key Vault
+metadata, gateway access denials and caller/model token attribution in logs.
+Terraform has offline validation and mocked-provider tests; the current
+three-model Terraform profile has not been certified by a fresh live apply.
+
+This is not a full application or production acceptance test. Real Search
+indexing/queries, Cosmos document workflows, agent tools, load/failover behavior,
+safety/limit saturation and end-user access need workload-specific tests.
+The reference environment's action-group test was rejected by Azure as having
+no valid receiver; notification delivery remains unverified. Check receiver
+verification/eligibility in your tenant, and do not release alerts without a
+successful delivery test.
 
 ## Release to AI engineers
 
 This is the foundation for developing `ai-app-01` and `ai-app-02`, not a
-ready-to-use application environment merely because Terraform applies.
+ready-to-use application environment merely because infrastructure deploys.
 Platform engineering should complete this handoff before inviting engineers:
 
 | Release requirement | What the platform engineer must provide |
 |---|---|
-| Provisioned foundation | A reviewed deployment, protected Terraform state, reconciled existing identities and passing infrastructure checks |
+| Provisioned foundation | A reviewed deployment, reconciled existing identities and passing checks; a protected remote backend if using Terraform |
 | Private access | Working developer/runner connectivity and private DNS; no public-access workaround |
 | Engineer access | Approved Entra groups with project access. The default group list is empty; a supplied list applies to both projects |
 | Application delivery | An approved deployment identity/pipeline with scoped app deployment, runtime identity attachment and registry push permissions; these human/pipeline grants are not provisioned automatically |
@@ -281,69 +300,23 @@ and application tests. See the [private-access and smoke-test guide](infra/READM
 
 ## Get started
 
-Supply tenant and subscription IDs through ignored local configuration or
-environment variables. The repo provisions resources into existing subscriptions;
-it does not create tenants or subscriptions.
+Choose **one implementation per installation**; never manage the same resources
+with both tools. The guides contain the exact inputs, commands and redeployment rules.
 
-Choose [Terraform](infra/terraform/README.md) or [Bicep](infra/bicep/README.md);
-do not deploy both over the same resources. Both need Azure CLI and resource/RBAC
-permissions in both subscriptions. Directory identity setup differs by tool.
-See the [infrastructure guide](infra/README.md) for entry points and prerequisites.
+| Implementation | Start here | Important prerequisite |
+|---|---|---|
+| Terraform | [Terraform guide](infra/terraform/README.md) | Protected remote state backend and Azure/Entra permissions |
+| Bicep | [Bicep guide](infra/bicep/README.md) | Explicit gateway Entra preparation and caller-role assignments |
 
-### Terraform
-
-Use Terraform matching [versions.tf](infra/terraform/versions.tf), Python 3 and
-Entra application permissions.
-
-```bash
-az login --tenant <tenant-id>
-cp infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars
-# Fill in tenant, both subscriptions, contact, model and engineer groups.
-# Set approved operations budgets/contact and the first day of the deployment month.
-terraform -chdir=infra/terraform init -lockfile=readonly
-terraform -chdir=infra/terraform workspace new launchpad-nonprod
-terraform -chdir=infra/terraform fmt -check -recursive
-terraform -chdir=infra/terraform validate
-terraform -chdir=infra/terraform test
-python3 -m unittest discover -s infra/terraform/tests -p 'test_*.py'
-terraform -chdir=infra/terraform plan -out=tfplan
-```
-
-Select the existing workspace on subsequent runs. Review subscription placement,
-costs and resource changes, then:
-
-```bash
-terraform -chdir=infra/terraform apply tfplan
-bash infra/terraform/test.sh
-terraform -chdir=infra/terraform plan -detailed-exitcode
-```
-
-`terraform test` is offline and uses mocked providers. `test.sh` checks the live
-infrastructure through read-only management APIs: tenant/subscription boundaries,
-private access, endpoint approval, peering, DNS, monitoring and model provisioning.
-It does not run agents/apps, read keys or perform paid inference.
-
-A passing infrastructure test is not a packet-flow or application test. Model
-calls, image pulls, private runtime DNS, evaluations and telemetry delivery need
-separate validation once an application is added.
-
-### Bicep
-
-Prepare the gateway's Entra application and caller authorization as described in
-the [Bicep guide](infra/bicep/README.md). Then compile the subscription deployment:
-
-```bash
-az bicep build --file infra/bicep/main.bicep --stdout > /dev/null
-```
-
-Supply environment-specific parameters, review a subscription-scope `what-if`,
-and deploy only after reviewing scope, permissions and costs.
-
-Subscription display names are `sub-ai-hub-nonprod` and `sub-ai-spokes-nonprod`.
-The Terraform inputs `ai_hub_subscription_id` and
-`ai_spokes_subscription_id` refer to their IDs respectively. Display-name
-changes do not require provider, state or resource-group renames. Here, ai-hub
-means shared AI services, not an enterprise network hub or a legacy Foundry hub.
+1. Confirm the two target subscriptions, region, private-access prerequisites,
+   model availability and costs.
+2. Supply real inputs through environment variables or ignored local files;
+   never commit tenant values, credentials, state or saved plans.
+3. Run offline checks and review a fresh Terraform plan or Bicep what-if.
+4. Deploy with approval, verify private-access closure and complete the
+   [platform handoff checks](#release-to-ai-engineers).
+5. Run [synthetic smoke tests](infra/README.md#private-access-and-agent-smoke-test)
+   from approved private connectivity; model calls are explicitly opt-in.
 
 ## Links and sources
 
@@ -353,6 +326,7 @@ means shared AI services, not an enterprise network hub or a legacy Foundry hub.
 - [Terraform implementation](infra/terraform/README.md)
 - [Bicep implementation](infra/bicep/README.md)
 - [Editable architecture canvas](docs/reference-architecture.canvas)
+- [Architecture image and editable SVG](docs/reference-architecture.svg)
 - [Private access, smoke test and operations](infra/README.md#private-access-and-agent-smoke-test)
 
 ### Reference implementations

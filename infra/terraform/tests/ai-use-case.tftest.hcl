@@ -97,6 +97,10 @@ run "private_use_case" {
   module {
     source = "./modules/ai-use-case"
   }
+  assert {
+    condition     = one([for service in output.private_service_ids : service.api_version if service.id == azurerm_container_app_environment.this.id]) == "2025-07-01"
+    error_message = "ACA verification must use an API version exposing publicNetworkAccess."
+  }
 
   assert {
     condition     = azurerm_storage_account.this.account_kind == "StorageV2" && azurerm_storage_account.this.account_tier == "Standard" && azurerm_storage_account.this.account_replication_type == "LRS" && !azurerm_storage_account.this.shared_access_key_enabled && !azurerm_storage_account.this.allow_nested_items_to_be_public && azurerm_storage_account.this.default_to_oauth_authentication && azurerm_storage_account.this.public_network_access == "Disabled"

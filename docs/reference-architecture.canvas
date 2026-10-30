@@ -2,7 +2,7 @@
   "nodes": [
     {"id":"tenant","type":"group","label":"Corporate Entra tenant / two existing subscriptions / Central US","x":-30,"y":-50,"width":2330,"height":1140},
     {"id":"engineers","type":"text","text":"AI engineers\nProject-scoped Entra access\nApproved private access required","x":0,"y":350,"width":300,"height":150},
-    {"id":"enterprise","type":"text","text":"Existing enterprise platform\nOptional private access / routing / DNS\nNot provisioned here","x":0,"y":60,"width":300,"height":180},
+    {"id":"enterprise","type":"text","text":"Existing enterprise platform\nRouting / DNS / developer connectivity\nGit setup / application CI/CD\nNot provisioned here","x":0,"y":60,"width":300,"height":180},
     {"id":"ai_spokes","type":"group","label":"sub-ai-spokes-nonprod","x":340,"y":50,"width":1040,"height":1000,"color":"5"},
     {"id":"spokes_infra","type":"group","label":"rg-ai-spokes-infra-nonprod-cus","x":360,"y":100,"width":1000,"height":540,"color":"5"},
     {"id":"spokes_network","type":"text","text":"ai-spoke VNet / NSGs / private endpoints\nDedicated ACA subnets\nShared Agent Service subnet","x":390,"y":150,"width":600,"height":100},

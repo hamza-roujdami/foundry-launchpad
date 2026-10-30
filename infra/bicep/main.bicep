@@ -40,7 +40,7 @@ param deploymentName string = 'foundry-launchpad-nonprod'
 param tags Tags = { workload: 'foundry-launchpad', environment: 'nonprod' }
 @description('Use cases with unique stable /23 subnet slots, 1-31. Do not renumber existing slots.')
 @minLength(1)
-@maxLength(16)
+@maxLength(10)
 param useCases UseCase[] = [{ name: 'ai-app-01', subnetSlot: 1 }, { name: 'ai-app-02', subnetSlot: 2 }]
 @description('Approved model name/version/SKU/capacity; deployment can fail if region or quota is unavailable.')
 param models Models = {

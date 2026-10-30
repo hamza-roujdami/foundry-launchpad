@@ -142,6 +142,7 @@ class Contracts(unittest.TestCase):
     def test_default_topology(self):
         root = self.template
         self.assertEqual(root["parameters"]["location"]["defaultValue"], "centralus")
+        self.assertEqual(root["parameters"]["useCases"]["maxLength"], 10)
         self.assertEqual([app["name"] for app in root["parameters"]["useCases"]["defaultValue"]], ["ai-app-01", "ai-app-02"])
         self.assertEqual(root["parameters"]["models"]["defaultValue"], {
             "fast-chat": {"name": "gpt-6.1-sol", "version": "2026-09-29", "skuName": "DataZoneStandard", "capacity": 10},
@@ -206,6 +207,12 @@ class Contracts(unittest.TestCase):
         self.assertEqual(counts["microsoft.cognitiveservices/accounts/projects"], 3)
         self.assertEqual(counts["microsoft.insights/privatelinkscopes/scopedresources"], 10)
         self.assertEqual(counts["microsoft.authorization/roleassignments"], 35)
+
+    def test_endpoint_capacity_guard(self):
+        network = nested(self.template, "spokesNetwork")
+        self.assertEqual(network["parameters"]["useCases"]["maxLength"], 10)
+        self.assertLessEqual(5 + 5 * 10, 64 - 5 - 4)
+        self.assertIn("26", json.dumps(network["variables"]["subnets"]))
 
     def test_subscriptions_ownership_and_ordering(self):
         root = resource_map(self.template)

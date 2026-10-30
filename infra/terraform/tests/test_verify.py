@@ -78,6 +78,12 @@ class VerifyTests(unittest.TestCase):
         if args[:2] == ("group", "show"):
             return {"name": args[args.index("--name") + 1]}
         if args[:2] == ("rest", "--method"):
+            if "/managedEnvironments/" in args[args.index("--url") + 1]:
+                url = args[args.index("--url") + 1]
+                properties = {"provisioningState": "Succeeded", "vnetConfiguration": {"internal": True}}
+                if "api-version=2025-07-01" in url:
+                    properties["publicNetworkAccess"] = "Disabled"
+                return {"properties": properties}
             return {"properties": {
                 "publicNetworkAccess": "Disabled",
                 "provisioningState": "Succeeded",
@@ -149,6 +155,18 @@ class VerifyTests(unittest.TestCase):
         self.broken_peering = True
         self.run_verification()
         self.assertEqual(self.verifier["failed"], 3)
+
+    def test_aca_verification_requires_property_exposing_api(self):
+        environment = {
+            "id": resource_id(SPOKES, "Microsoft.App/managedEnvironments/test-aca"),
+            "api_version": "2025-07-01",
+        }
+        self.data["private_services"].append(environment)
+        self.run_verification()
+        self.assertEqual(self.verifier["failed"], 0)
+        environment["api_version"] = "2024-03-01"
+        self.run_verification()
+        self.assertGreater(self.verifier["failed"], 0, "An absent privacy property must not silently pass")
 
     def test_all_three_model_deployments_are_checked(self):
         output = self.run_verification()

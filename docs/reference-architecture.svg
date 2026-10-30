@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2080" height="1440" viewBox="0 0 2080 1440" role="img" aria-labelledby="title description">
   <title id="title">Foundry Launchpad - private AI foundation</title>
-  <desc id="description">Target infrastructure in Central US: two existing subscriptions and five resource groups. The spokes subscription contains shared Foundry with two projects, shared ACR, networking, and two dedicated app infrastructure groups. The hub subscription contains the private APIM AI gateway, model account, Content Safety, networking, private DNS and AMPLS. Future application and agent model calls go through APIM only. Existing enterprise connectivity is outside deployment scope.</desc>
+  <desc id="description">Non-production reference infrastructure in Central US: two existing subscriptions and five resource groups. The ai-spoke subscription contains shared Foundry with two projects, ACR, networking, and two dedicated application infrastructure groups. The ai-hub subscription contains the private APIM AI gateway, three model aliases, Content Safety, networking, private DNS and AMPLS. Model calls go through APIM. Git setup, application CI/CD, developer connectivity and enterprise landing-zone design are outside scope.</desc>
   <defs>
     <style>
       text { font-family: Arial, Helvetica, sans-serif; fill: #172b45; }
@@ -78,7 +78,7 @@
   <text x="40" y="57" class="title">Foundry Launchpad</text>
   <text x="40" y="88" class="subtitle">Private AI foundation  /  Central US  /  Non-production reference architecture</text>
   <rect x="1780" y="31" width="260" height="43" rx="21" fill="#edf4fb"/>
-  <text x="1910" y="59" text-anchor="middle" class="tag">DESIGN PREVIEW</text>
+  <text x="1910" y="59" text-anchor="middle" class="tag">REFERENCE ARCHITECTURE</text>
 
   <rect x="40" y="111" width="2000" height="38" rx="7" fill="#edf3f9"/>
   <use href="#identity" x="55" y="117" width="26" height="26"/>
@@ -241,8 +241,8 @@
   <rect x="40" y="1180" width="2000" height="105" rx="8" fill="#fff6d8" stroke="#ebbf46" stroke-width="2"/>
   <use href="#network" x="64" y="1208" width="47" height="47"/>
   <text x="129" y="1214" class="heading">Existing enterprise platform</text>
-  <text x="129" y="1242" class="body">Optional private access / routing / central DNS / private deployment runners</text>
-  <text x="129" y="1267" class="small">Customer-owned integration boundary. No Firewall, VPN, ExpressRoute or Application Gateway is provisioned here.</text>
+  <text x="129" y="1242" class="body">Platform-owned connectivity / routing / DNS / developer access and deployment systems</text>
+  <text x="129" y="1267" class="small">Out of scope: platform landing-zone design, Git/org setup, application CI/CD, VPN and developer workstations.</text>
   <rect x="1720" y="1214" width="294" height="35" rx="17" fill="#ffe6a1"/>
   <text x="1867" y="1237" text-anchor="middle" class="tag" style="fill:#805e06">NOT DEPLOYED BY LAUNCHPAD</text>
   <path d="M630 1180V1146M1675 1180V1146" fill="none" stroke="#ae892b" stroke-width="2" stroke-dasharray="6 5"/>
@@ -254,7 +254,7 @@
   <path d="M798 1323H856" class="network"/>
   <text x="868" y="1329" class="small">Private network relationship</text>
   <text x="2040" y="1329" text-anchor="end" class="small">5 resource groups / 2 projects / 2 ACA environments / 1 shared registry</text>
-  <text x="40" y="1371" class="small">* Project identity model connection configured in IaC; validate live before agent use.</text>
+  <text x="40" y="1371" class="small">* Project-qualified APIM connections use managed identity; validate each installation before use.</text>
   <text x="2040" y="1371" text-anchor="end" class="small">All five RGs: monthly budgets / 80% and 100% notifications</text>
   <text x="40" y="1400" class="small">Infrastructure only: no apps, agents, container images or end-user public ingress. Resource-group boxes show ownership, not VNet boundaries.</text>
 </svg>

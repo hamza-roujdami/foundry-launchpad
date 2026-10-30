@@ -5,20 +5,20 @@ A reference platform that gives AI engineers governed access to Microsoft Foundr
 
 ## Reference sources (in order of precedence)
 1. This README: the Launchpad architecture and resource-group ownership. Authoritative for this repo.
-2. `Azure/terraform-azurerm-avm-ptn-aiml-landing-zone`: the AVM pattern module for the full AI/ML landing zone for Foundry. Follow its module layout, provider versions, and examples (`default`, `default-byo-vnet`, `standalone`, `standalone-byo-vnet`).
+2. `Azure/terraform-azurerm-avm-ptn-aiml-landing-zone`: design guidance and examples for the full AI/ML landing zone. Preserve this repo's deliberately smaller module layout and pinned provider versions; do not copy standalone variants into it.
 3. `Azure/terraform-ai-gateway-landing-zone`: the APIM AI gateway (Citadel). Use it for gateway policies, backend onboarding, model aliases, and access contracts.
 4. `Azure/AI-Landing-Zones`: broader guidance. Not reviewed yet.
 
 If these sources conflict with each other or with the README, flag the conflict and ask. Don't pick one silently.
 
 ## Architecture rules (do not violate)
-- Models are reached only through the AI hub API Management gateway. Never add a direct call to a Foundry or Azure OpenAI endpoint from app code.
+- Models are reached only through the ai-hub API Management gateway. Direct model inference from app code is prohibited. Foundry project/agent API calls are allowed when the agent uses its configured APIM model connection.
 - Authentication: Entra ID tokens are the default. Use APIM subscription keys only when a consumer can't use Entra, and store them in Key Vault, never in code, tfvars, or chat.
 - AI engineers never hold model keys.
-- Each project gets its own managed identity, token limit, and usage tracking for showback.
+- Each project has a managed identity distinct from its app runtime identity. Gateway limits and usage metrics are per verified caller; both projects share the same model allowlist, not separate model entitlements.
 - Private networking by default: private endpoints in the private endpoints subnet, with private DNS zones linked to the VNet.
-- Resource-group owners: `rg-network` and `rg-ai-hub` belong to the platform team; `rg-ai-app` belongs to AI engineers. Don't move resources across that boundary without an explicit decision.
-- Out of scope unless asked: platform landing zone, Entra tenant setup, Azure Policy, GitHub org setup, Application Gateway/WAF, knowledge sources, second region.
+- Shared ai-hub and ai-spoke infrastructure stays platform-owned; `rg-ai-app-01-dev-*` and `rg-ai-app-02-dev-*` are application-owned. Don't move resources across that boundary without an explicit decision.
+- Out of scope unless asked: platform landing-zone details, tenant/subscription setup, Azure Policy, Git/org setup, application CI/CD, developer connectivity/access provisioning, public ingress, knowledge sources and a second region. Repository CI only validates the infrastructure source.
 
 ## Engineering approach
 - Start with the simplest change that works. Ask when the request is ambiguous.
@@ -37,4 +37,4 @@ If these sources conflict with each other or with the README, flag the conflict 
 - Use GitHub tools to read existing issues and PRs before proposing changes. Don't create, merge, or push unless asked.
 
 ## Diagrams
-The architecture diagram is Mermaid in the README and an Obsidian canvas in `docs/reference-architecture.canvas`. Update both together when the architecture changes.
+The README embeds `docs/reference-architecture.png`, generated from the original editable SVG. Mermaid source remains in the README; `docs/reference-architecture.canvas` is the editable ownership/relationship view. Keep all representations consistent when architecture changes.

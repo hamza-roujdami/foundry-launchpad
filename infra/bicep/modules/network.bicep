@@ -12,6 +12,7 @@ param addressPrefix string
 @allowed(['hub', 'spokes'])
 param role string
 @description('Stable dedicated ACA subnet slots.')
+@maxLength(10)
 param useCases UseCase[]
 
 var acaSubnets = [

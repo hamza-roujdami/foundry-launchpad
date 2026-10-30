@@ -8,9 +8,9 @@ See the [architecture and cost estimate](../../README.md).
 
 | Subscription | Resource group | Contents |
 |---|---|---|
-| `sub-ai-hub-nonprod` | `rg-ai-hub-infra-nonprod-cus` | Hub VNet, subnets, NSGs, private endpoints, shared DNS and AMPLS |
+| `sub-ai-hub-nonprod` | `rg-ai-hub-infra-nonprod-cus` | ai-hub VNet, subnets, NSGs, private endpoints, shared DNS and AMPLS |
 | `sub-ai-hub-nonprod` | `rg-ai-hub-services-nonprod-cus` | APIM Standard v2, model Foundry, Content Safety, gateway identity and monitoring |
-| `sub-ai-spokes-nonprod` | `rg-ai-spokes-infra-nonprod-cus` | Spokes network, subnets, endpoints, ACR Premium, shared Foundry with two projects and runtime monitoring |
+| `sub-ai-spokes-nonprod` | `rg-ai-spokes-infra-nonprod-cus` | ai-spoke network, subnets, endpoints, ACR Premium, shared Foundry with two projects and runtime monitoring |
 | `sub-ai-spokes-nonprod` | `rg-ai-app-01-dev-cus` | Internal ACA environment, runtime identity, private Storage/Search/Cosmos/Key Vault and telemetry |
 | `sub-ai-spokes-nonprod` | `rg-ai-app-02-dev-cus` | The same dedicated use-case resources |
 
@@ -74,7 +74,7 @@ belong only in ignored local configuration or `TF_VAR_` environment variables.
 | `deployment_name` | Stable naming seed; changing it replaces named resources |
 | `publisher_email` | Real APIM contact |
 | `operations` | Required operational email, initial budget start date and four monthly amounts: hub_infra, hub_services, spokes_infra, per_app |
-| `use_cases` | Use-case names; defaults ai-app-01 and ai-app-02 |
+| `use_cases` | 1-10 use-case names; defaults ai-app-01 and ai-app-02. The upper bound protects endpoint-subnet capacity, not a scale guarantee |
 | `use_case_subnet_slots` | Unique, stable /23 slots; defaults 1 and 2. Never renumber existing slots |
 | `engineer_group_ids` | Existing Entra groups for project-scoped Foundry User access |
 | `enable_agent_infrastructure` | Private BYO connections/capability hosts, not agent definitions |
@@ -92,9 +92,12 @@ publishable files.
 ## Networking and identity
 
 New-network mode creates bilateral VNet peering. Private DNS is owned once in the
-hub and linked to both networks. Each ACA environment has its own internal zone.
-The default spokes layout is endpoints `10.41.0.0/26`, ACA `10.41.2.0/23` and
+ai-hub and linked to both networks. Each ACA environment has its own internal zone.
+The default ai-spoke layout is endpoints `10.41.0.0/26`, ACA `10.41.2.0/23` and
 `10.41.4.0/23`, and shared Foundry runtime `10.41.192.0/24`.
+The `/26` endpoint subnet reserves five shared addresses and five per use case,
+leaving four spare after Azure's reservations at the 10-use-case input limit.
+Do not increase that limit without reviewing IP usage and updating both implementations.
 
 APIM has inbound Private Link and outbound delegated VNet integration in its own
 subscription/region. It briefly permits public access during creation; an ordered
@@ -115,11 +118,11 @@ Coordinate AMPLS/DNS with the platform owner. Reusing an existing ACR, monitorin
 workspace or AMPLS is not implemented.
 
 With agent infrastructure enabled, every project gets a `<project>-ai-gateway`
-`ApiManagement` connection to the hub's `/foundry/v1` endpoint. It uses
+`ApiManagement` connection to the ai-hub's `/foundry/v1` endpoint. It uses
 `ProjectManagedIdentity`, the custom gateway audience, and a serialized static
 approved chat-model list. Agents select `<project>-ai-gateway/fast-chat` or
 `<project>-ai-gateway/advanced-chat`; embeddings are called by application/indexing code
-through APIM, not offered as an agent chat model. Alias names are the actual hub
+through APIM, not offered as an agent chat model. Alias names are the actual ai-hub
 deployment names; APIM rejects other aliases and mismatched operations.
 Connection names are project-qualified to avoid shared-account collisions.
 Existing capability-host connection bindings cannot be updated in place;
@@ -129,6 +132,8 @@ validation disabled only for that resource because the embedded schema omits
 this authentication type. No model key or second APIM is created.
 Runtime assets and [live acceptance checks](../README.md#private-access-and-agent-smoke-test)
 remain separate. Private endpoints do not guarantee egress isolation or residency.
+Chat token limits apply only to inference creation, not response retrieval,
+cancellation or deletion. Those operations still require caller ownership.
 
 Use the three-model catalog in [the root README](../../README.md#model-access-pattern).
 This replaces the previous singular `model` input: update ignored local inputs

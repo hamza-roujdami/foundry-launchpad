@@ -52,8 +52,8 @@ variable "use_cases" {
   type        = set(string)
   default     = ["ai-app-01", "ai-app-02"]
   validation {
-    condition     = length(var.use_cases) > 0 && length(var.use_cases) <= 16 && alltrue([for name in var.use_cases : can(regex("^[a-z][a-z0-9-]{1,29}[a-z0-9]$", name)) && !strcontains(name, "--")])
-    error_message = "Use 1-16 unique use-case names, each 3-31 lowercase letters/digits with single internal hyphens, starting with a letter."
+    condition     = length(var.use_cases) > 0 && length(var.use_cases) <= 10 && alltrue([for name in var.use_cases : can(regex("^[a-z][a-z0-9-]{1,29}[a-z0-9]$", name)) && !strcontains(name, "--")])
+    error_message = "Use 1-10 unique use-case names within the reference network capacity, each 3-31 lowercase letters/digits with single internal hyphens, starting with a letter."
   }
 }
 
